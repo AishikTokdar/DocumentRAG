@@ -90,9 +90,10 @@ class VectorStoreService:
         return provider.api_key
 
     def _make_local_cpu_embeddings(self, model: str) -> Embeddings:
-        """Runs MiniLM (etc.) on CPU via sentence-transformers — no cloud API."""
+        """Runs MiniLM (etc.) on CPU via sentence-transformers with low memory batching."""
         mk: dict[str, Any] = {"device": "cpu"}
-        return HuggingFaceEmbeddings(model_name=model, model_kwargs=mk)
+        ek: dict[str, Any] = {"batch_size": 16, "normalize_embeddings": True}
+        return HuggingFaceEmbeddings(model_name=model, model_kwargs=mk, encode_kwargs=ek)
 
     def _make_embeddings(self, provider: AIProvider, model: str) -> Embeddings:
         if provider.name == "huggingface":
@@ -206,6 +207,7 @@ class VectorStoreService:
 
     def create_from_documents(self, documents: list[Document]) -> int:
         """Create vector store from document chunks and persist to disk."""
+        gc.collect()
         candidates = self._embedding_candidates()
 
         last_error: Exception | None = None
@@ -216,6 +218,7 @@ class VectorStoreService:
                 self.vectorstore = FAISS.from_documents(documents, emb)
                 self.embeddings = emb
                 self.save_to_disk()
+                gc.collect()
                 logger.info(
                     "Vector index built with embeddings: %s / %s",
                     provider.name,

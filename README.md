@@ -22,9 +22,10 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
 - [Component Breakdown & Context](#component-breakdown--context)
 - [Smart Zero-Config Defaults Architecture](#smart-zero-config-defaults-architecture)
 - [Deployment Guides](#deployment-guides)
-  - [Option 1: Vercel (Frontend) + Render (Backend)](#option-1-vercel-frontend--render-backend)
-  - [Option 2: Railway (Full-Stack Container)](#option-2-railway-full-stack-container)
-  - [Option 3: Docker & Docker Compose (Local / Self-Hosted / Coolify)](#option-3-docker--docker-compose-local--self-hosted--coolify)
+  - [Option 1: Hugging Face Spaces (Backend Docker / Python SDK)](#option-1-hugging-face-spaces-backend-docker--python-sdk)
+  - [Option 2: Vercel (Frontend) + Render (Backend)](#option-2-vercel-frontend--render-backend)
+  - [Option 3: PythonAnywhere (Backend Web Service)](#option-3-pythonanywhere-backend-web-service)
+  - [Option 4: Docker & Docker Compose (Local / Self-Hosted / Coolify)](#option-4-docker--docker-compose-local--self-hosted--coolify)
 - [Local Bash Deployment Guide](#local-bash-deployment-guide)
 - [Supported AI Models & API Keys Guide](#supported-ai-models--api-keys-guide)
 - [Environment Configuration (.env Reference)](#environment-configuration-env-reference)
@@ -164,15 +165,64 @@ DocumentRAG is built with **Smart Zero-Config Defaults**. You do **not** need to
 
 ## Deployment Guides
 
-DocumentRAG supports multiple cloud deployment strategies depending on your target infrastructure.
+### Option 1: Hugging Face Spaces (Python SDK - 100% Free, No Docker Needed)
 
-### Option 1: Vercel (Frontend) + Render (Backend)
+Hugging Face Spaces provides a **100% FREE CPU Basic tier (2 vCPU • 16 GB RAM)** with **zero credit card required** when using the native **Python SDK** (no Docker required).
 
-Decouple the frontend Single Page Application (CDN) from the Python ASGI backend service.
+#### Step 1: Create a Space on Hugging Face
+1. Log in to [Hugging Face](https://huggingface.co/) (Create a free account if needed).
+2. Go to [huggingface.co/new-space](https://huggingface.co/new-space).
+3. **Space Name**: `documentrag-backend`.
+4. **License**: `mit`.
+5. **Select the Space SDK**: **Gradio** or **Blank Python**.
+6. **Space Hardware**: **CPU Basic • 2 vCPU • 16 GB RAM** (Free).
+7. Visibility: **Public** or **Private**.
+8. Click **Create Space**.
+
+#### Step 2: Push Repository Code & Entrypoint
+Upload your `backend/` files to your Space. Ensure you include an `app.py` entrypoint file in the root of your Space:
+```python
+# app.py (Entry point for Hugging Face Spaces)
+import os
+import uvicorn
+from app.main import app as fastapi_app
+
+# Module-level ASGI export for Hugging Face runner
+app = fastapi_app
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 7860))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
+```
+
+Push your code via Git:
+```bash
+git clone https://huggingface.co/spaces/YOUR_USERNAME/documentrag-backend
+cd documentrag-backend
+# Copy all files from DocumentRAG/backend/ into this folder
+git add .
+git commit -m "Deploy DocumentRAG Backend"
+git push origin main
+```
+
+#### Step 3: Configure Environment Secrets (Hide API Keys)
+1. In your Space, navigate to **Settings** -> **Variables and Secrets** -> **New Secret**.
+2. Add secrets safely without exposing them in your code:
+   - `GOOGLE_API_KEY`: `your_gemini_key`
+   - `GROQ_API_KEY`: `your_groq_key`
+   - `CORS_ORIGINS`: `*`
+3. Hugging Face Spaces will automatically launch your FastAPI app on port `7860` and give you a public API endpoint:
+   `https://YOUR_USERNAME-documentrag-backend.hf.space`
+
+---
+
+### Option 2: Vercel (Frontend) + Render (Backend)
+
+Decouple the frontend Single Page Application (CDN) from the Python ASGI backend service. **Zero credit card required**.
 
 #### Step 1: Deploy Backend to Render
 
-##### Method A: Docker Container Deployment (Recommended - Fail-Proof)
+##### Method A: Docker Container Deployment (Recommended)
 1. Log in to [Render](https://render.com/).
 2. Click **New +** -> **Web Service** and connect your repository.
 3. Set **Language / Runtime**: **Docker**.
@@ -182,18 +232,14 @@ Decouple the frontend Single Page Application (CDN) from the Python ASGI backend
    - `GROQ_API_KEY` = `your_groq_key`
    - `CORS_ORIGINS` = `*` (or `https://your-app.vercel.app`)
    - `WEB_CONCURRENCY` = `1`
-6. Click **Create Web Service**. Render builds the container and binds port `$PORT` automatically without any Python PATH issues.
+6. Click **Create Web Service**. Render builds the container and binds port `$PORT` automatically.
 
 ##### Method B: Native Python 3 Environment
 1. Set **Language / Runtime**: **Python 3**.
 2. Set **Root Directory**: `backend`.
 3. Set **Build Command**: `pip install --upgrade pip && pip install -r requirements.txt`.
-4. Set **Start Command**: `python3 -m uvicorn app.main:app --host 0.0.0.0 --port $PORT` (or `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`).
+4. Set **Start Command**: `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 5. Add Environment Variables (`GOOGLE_API_KEY`, `GROQ_API_KEY`, `CORS_ORIGINS=*`, `PYTHONUNBUFFERED=1`, `WEB_CONCURRENCY=1`, `MALLOC_TRIM_THRESHOLD_=100000`).
-
-> [!TIP]
-> **Why Docker on Render is Recommended**:
-> Deploying via Docker (Method A) runs Python inside a standardized Linux container with all packages (`uvicorn`, `torch`, `faiss`, `pypdf`) pre-installed in system PATH. It completely eliminates `command not found` errors and guarantees seamless deployment on Render.
 
 #### Step 2: Deploy Frontend to Vercel
 1. Log in to [Vercel](https://vercel.com/).
@@ -201,36 +247,36 @@ Decouple the frontend Single Page Application (CDN) from the Python ASGI backend
 3. Set **Root Directory**: `frontend`.
 4. **Framework Preset**: Vite.
 5. Environment Variables:
-   - `VITE_API_BASE_URL` = `https://documentrag-backend.onrender.com`
+   - `VITE_API_BASE_URL` = `https://documentrag-backend.onrender.com` (or your HF Space URL)
 6. Click **Deploy**.
 
 ---
 
-### Option 2: Railway (Full-Stack Container)
+### Option 3: PythonAnywhere (Backend Web Service)
 
-Deploy DocumentRAG as a single container service on Railway.
+Dedicated Python hosting platform offering a **100% free tier** with **zero credit card required**.
 
-#### Step 1: Connect Repository
-1. Log in to [Railway](https://railway.app/).
-2. Click **New Project** -> **Deploy from GitHub repo**.
-3. Select your `DocumentRAG` repository.
-
-#### Step 2: Configure Environment Variables
-In Railway Dashboard -> **Variables**, add:
-- `GOOGLE_API_KEY`: Your Gemini API key
-- `GROQ_API_KEY`: Your Groq API key
-- `CORS_ORIGINS`: `*`
-- `PORT`: `8000`
-
-#### Step 3: Railway Build Settings
-1. In **Settings** -> **Build**, Railway automatically detects the root `Dockerfile`.
-2. Generate a Domain under **Networking** to expose the public endpoint.
+1. Sign up for a free account at [PythonAnywhere](https://www.pythonanywhere.com/).
+2. Open a **Bash Console** in your dashboard.
+3. Clone repository and install dependencies:
+   ```bash
+   git clone https://github.com/AishikTokdar/DocumentRAG.git
+   cd DocumentRAG/backend
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   ```
+4. In **Web** tab -> **Add a new web app**:
+   - Select **Manual configuration** -> **Python 3.11**.
+   - Set **WSGI Configuration file** to import `app.main:app` via ASGI/WSGI bridge or Uvicorn runner.
+   - Set Environment Variables under **Virtualenv** / `.env`.
+5. Click **Reload your_username.pythonanywhere.com**.
 
 ---
 
-### Option 3: Docker & Docker Compose (Local / Self-Hosted / Coolify)
+### Option 4: Docker & Docker Compose (Local / Self-Hosted / Coolify)
 
-For single-command local testing or deployment on self-hosted VPS servers (Coolify, Hetzner, AWS EC2, DigitalOcean).
+For single-command local testing or deployment on self-hosted VPS servers (Coolify, Hetzner, AWS EC2, DigitalOcean). **Zero cost forever**.
 
 1. Create `backend/.env`:
    ```bash

@@ -2,9 +2,19 @@
 FastAPI Application Entry Point & Interactive OpenAPI Documentation
 """
 
+import os
 import uuid
 from contextlib import asynccontextmanager
 from textwrap import dedent
+
+# Lock native C library thread pools to 1 thread for 512MB RAM free tier optimization
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["PYTHONUNBUFFERED"] = "1"
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

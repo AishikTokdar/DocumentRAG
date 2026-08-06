@@ -40,6 +40,10 @@ export default defineConfig(function (_a) {
         build: {
             outDir: "dist",
             sourcemap: false,
+            target: "es2020",
+            minify: "esbuild",
+            cssCodeSplit: true,
+            chunkSizeWarningLimit: 1000,
             rollupOptions: {
                 output: {
                     manualChunks: function (id) {

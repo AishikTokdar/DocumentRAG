@@ -5,6 +5,7 @@ Handles loading, parsing, and chunking of PDF documents.
 Uses LangChain for document loading and text splitting.
 """
 
+import gc
 import os
 import tempfile
 from dataclasses import dataclass
@@ -135,6 +136,7 @@ class PDFProcessor:
             result = self.process_file(tmp_path, file_name)
             return result
         finally:
-            # Clean up temporary file
+            # Clean up temporary file & trigger garbage collection
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
+            gc.collect()

@@ -12,12 +12,13 @@ from ..services.llm_service import LLMService
 router = APIRouter(tags=["Health & Operations"])
 
 
-@router.get("/", response_model=StatusResponse)
+@router.api_route("/", methods=["GET", "HEAD"], response_model=StatusResponse)
 async def root():
     """
     Root endpoint - basic health check.
     
     Returns simple status to confirm API is running.
+    Supports GET and HEAD requests for Render/cloud load balancer health checks.
     """
     return StatusResponse(
         status="running",
@@ -25,12 +26,13 @@ async def root():
     )
 
 
-@router.get("/health", response_model=StatusResponse)
+@router.api_route("/health", methods=["GET", "HEAD"], response_model=StatusResponse)
 async def health_check():
     """
     Health check endpoint.
     
     Returns detailed health status including configuration and server boot ID.
+    Supports GET and HEAD requests for Render/cloud load balancer health checks.
     """
     from ..main import SERVER_BOOT_ID
 
