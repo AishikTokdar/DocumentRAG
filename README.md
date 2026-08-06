@@ -24,9 +24,7 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
 - [Deployment Guides](#deployment-guides)
   - [Option 1: Vercel (Frontend) + Render (Backend)](#option-1-vercel-frontend--render-backend)
   - [Option 2: Railway (Full-Stack Container)](#option-2-railway-full-stack-container)
-  - [Option 3: Koyeb (Serverless Container Platform)](#option-3-koyeb-serverless-container-platform)
-  - [Option 4: Fly.io (Micro Container Deployment)](#option-4-flyio-micro-container-deployment)
-  - [Option 5: Docker & Docker Compose (Local / Self-Hosted / Coolify)](#option-5-docker--docker-compose-local--self-hosted--coolify)
+  - [Option 3: Docker & Docker Compose (Local / Self-Hosted / Coolify)](#option-3-docker--docker-compose-local--self-hosted--coolify)
 - [Local Bash Deployment Guide](#local-bash-deployment-guide)
 - [Supported AI Models & API Keys Guide](#supported-ai-models--api-keys-guide)
 - [Environment Configuration (.env Reference)](#environment-configuration-env-reference)
@@ -173,28 +171,29 @@ DocumentRAG supports multiple cloud deployment strategies depending on your targ
 Decouple the frontend Single Page Application (CDN) from the Python ASGI backend service.
 
 #### Step 1: Deploy Backend to Render
+
+##### Method A: Docker Container Deployment (Recommended - Fail-Proof)
 1. Log in to [Render](https://render.com/).
-2. Click **New +** -> **Web Service**.
-3. Select your repository and set **Root Directory**: `backend`.
-4. Build & Runtime settings:
-   - **Environment**: `Python 3`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `sh -c 'uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}'`
-5. Configure Environment Variables in Render Control Panel:
+2. Click **New +** -> **Web Service** and connect your repository.
+3. Set **Language / Runtime**: **Docker**.
+4. Set **Root Directory**: `backend` (Render uses `backend/Dockerfile` automatically).
+5. Add Environment Variables:
    - `GOOGLE_API_KEY` = `your_gemini_key`
    - `GROQ_API_KEY` = `your_groq_key`
    - `CORS_ORIGINS` = `*` (or `https://your-app.vercel.app`)
-   - `PYTHONUNBUFFERED` = `1`
    - `WEB_CONCURRENCY` = `1`
-   - `MALLOC_TRIM_THRESHOLD_` = `100000`
-6. Copy your deployed Render service URL (e.g. `https://documentrag-backend.onrender.com`).
+6. Click **Create Web Service**. Render builds the container and binds port `$PORT` automatically without any Python PATH issues.
 
-> [!NOTE]
-> **Render Memory & Port Troubleshooting (512MB RAM Free Tier):**
-> Render's free instance enforces a strict **512 MB RAM limit**. DocumentRAG automatically restricts PyTorch, OpenMP, and Hugging Face thread pools to single-thread mode (`OMP_NUM_THREADS=1`) and triggers Python garbage collection (`gc.collect()`). To guarantee your Render service stays under 200 MB RAM and never gets OOM-killed:
-> 1. Set Environment Variable `WEB_CONCURRENCY=1` (prevents Uvicorn worker duplication).
-> 2. Set Environment Variable `MALLOC_TRIM_THRESHOLD_=100000` (forces C memory unmapping back to OS).
-> 3. Initial cold boot takes 10-20s for Python dependencies (`PyPDF`, `LangChain`, `SentenceTransformers`) to load. Render's health scanner will log `No open ports detected, continuing to scan...` during warm-up, and automatically report `Port 10000 open! Your service is live` once socket binding completes.
+##### Method B: Native Python 3 Environment
+1. Set **Language / Runtime**: **Python 3**.
+2. Set **Root Directory**: `backend`.
+3. Set **Build Command**: `pip install --upgrade pip && pip install -r requirements.txt`.
+4. Set **Start Command**: `python3 -m uvicorn app.main:app --host 0.0.0.0 --port $PORT` (or `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`).
+5. Add Environment Variables (`GOOGLE_API_KEY`, `GROQ_API_KEY`, `CORS_ORIGINS=*`, `PYTHONUNBUFFERED=1`, `WEB_CONCURRENCY=1`, `MALLOC_TRIM_THRESHOLD_=100000`).
+
+> [!TIP]
+> **Why Docker on Render is Recommended**:
+> Deploying via Docker (Method A) runs Python inside a standardized Linux container with all packages (`uvicorn`, `torch`, `faiss`, `pypdf`) pre-installed in system PATH. It completely eliminates `command not found` errors and guarantees seamless deployment on Render.
 
 #### Step 2: Deploy Frontend to Vercel
 1. Log in to [Vercel](https://vercel.com/).
@@ -229,49 +228,7 @@ In Railway Dashboard -> **Variables**, add:
 
 ---
 
-### Option 3: Koyeb (Serverless Container Platform)
-
-Deploy DocumentRAG on Koyeb's serverless container infrastructure.
-
-#### Step 1: Create Koyeb Service
-1. Log in to [Koyeb](https://www.koyeb.com/).
-2. Click **Create Service** -> **GitHub**.
-3. Select your `DocumentRAG` repository.
-
-#### Step 2: Environment & Builder Setup
-1. Builder: **Dockerfile**.
-2. Environment Variables:
-   - `GOOGLE_API_KEY`: `your_key`
-   - `GROQ_API_KEY`: `your_key`
-   - `CORS_ORIGINS`: `*`
-3. Port Exposure: HTTP Port `8000` / Path `/`.
-4. Click **Deploy**.
-
----
-
-### Option 4: Fly.io (Micro Container Deployment)
-
-Deploy DocumentRAG globally using Fly.io micro-VM containers.
-
-#### Step 1: Install Fly CLI & Launch
-```bash
-fly launch --no-deploy
-```
-
-#### Step 2: Configure Secrets
-Set API key secrets safely using Fly CLI (prevents key leakage in configuration files):
-```bash
-fly secrets set GOOGLE_API_KEY="your_key" GROQ_API_KEY="your_key" CORS_ORIGINS="*"
-```
-
-#### Step 3: Deploy
-```bash
-fly deploy
-```
-
----
-
-### Option 5: Docker & Docker Compose (Local / Self-Hosted / Coolify)
+### Option 3: Docker & Docker Compose (Local / Self-Hosted / Coolify)
 
 For single-command local testing or deployment on self-hosted VPS servers (Coolify, Hetzner, AWS EC2, DigitalOcean).
 
