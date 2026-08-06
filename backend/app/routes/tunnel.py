@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request, Response
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["Internal"])
+router = APIRouter(tags=["Oversight & Monitoring"])
 
 # Sentry hosts we accept (prevent open-relay abuse)
 _ALLOWED_HOSTS = {"sentry.io", "ingest.sentry.io"}

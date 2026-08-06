@@ -88,12 +88,14 @@ class StatusResponse(BaseModel):
         pdf_loaded: Whether a PDF is currently loaded
         model: Currently configured model
         documents_loaded: Count of active loaded documents
+        server_boot_id: Unique UUID generated on each backend server startup
     """
     status: str = "running"
     message: str
     pdf_loaded: bool = False
     model: str | None = None
     documents_loaded: int = 0
+    server_boot_id: str | None = None
 
 
 class ModelInfo(BaseModel):

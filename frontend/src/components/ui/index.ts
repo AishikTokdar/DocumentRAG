@@ -3,9 +3,6 @@
  * 
  * Centralized exports for all UI components.
  * Import components from '@/components/ui' for cleaner imports.
- * 
- * Usage:
- * import { Button, Badge, GlassCard } from '@/components/ui';
  */
 
 export * from "./button";
@@ -18,3 +15,8 @@ export * from "./scroll-reveal";
 export * from "./spinner";
 export * from "./dropdown-menu";
 export * from "./tooltip";
+export * from "./spotlight-card";
+export * from "./border-beam";
+export * from "./scramble-text";
+export * from "./animated-grid-pattern";
+export * from "./global-background";

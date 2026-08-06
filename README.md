@@ -48,65 +48,62 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
 
 ## System Architecture & Data Flow
 
-```mermaid
-flowchart TD
-    subgraph Client["Client Tier (Browser)"]
-        UI["React 18 SPA (Vite + Tailwind)"]
-        Session["Web Crypto Session Isolation (UUID v4)"]
-        Storage["IndexedDB & Local Storage"]
-        Exporters["Export Engine (.txt & .pdf)"]
-    end
+```text
++-----------------------------------------------------------------------------------------------+
+|                                    DOCUMENTRAG SYSTEM ARCHITECTURE                            |
++-----------------------------------------------------------------------------------------------+
 
-    subgraph Backend["Backend Tier (FastAPI Engine)"]
-        API["FastAPI REST & SSE Routes"]
-
-        subgraph Ingestion["PDF Ingestion Service"]
-            PDFLoader["PyPDF Text Loader"]
-            Splitter["RecursiveCharacterTextSplitter"]
-        end
-
-        subgraph Embeddings["Embedding & Vector Service"]
-            CPUModel["sentence-transformers (all-MiniLM-L6-v2)"]
-            FAISSStore["FAISS Vector Store (Session-Isolated)"]
-        end
-
-        subgraph Pipeline["7-Stage Agent Pipeline"]
-            Agent1["1. Extractor (FAISS Retrieval)"]
-            Agent2["2. Analyzer (Relevance Filter)"]
-            Agent3["3. Preprocessor (Text Cleaner)"]
-            Agent4["4. Optimizer (Context Window Trimming)"]
-            Agent5["5. Synthesizer (Mode Prompt Builder)"]
-            Agent6["6. Validator (Factual Grounding)"]
-            Agent7["7. Assembler (Citations & Tokens)"]
-        end
-
-        subgraph Providers["Multi-Provider LLM Failover"]
-            Gemini["Google Gemini"]
-            Groq["Groq LPU"]
-            Cerebras["Cerebras WSE"]
-            SambaNova["SambaNova Cloud"]
-            HF["Hugging Face"]
-            OpenRouter["OpenRouter Free"]
-        end
-    end
-
-    UI -->|"HTTP Headers (X-Chat-Session-Id)"| API
-    UI <--> Storage
-    UI --> Exporters
-
-    API -->|"Upload PDFs (<= 50 MB)"| Ingestion
-    PDFLoader --> Splitter
-    Splitter --> CPUModel
-    CPUModel --> FAISSStore
-
-    API -->|"Ask / Stream Query"| Pipeline
-    Agent1 --> FAISSStore
-    FAISSStore --> Agent1
-    Agent1 --> Agent2 --> Agent3 --> Agent4 --> Agent5 --> Agent6 --> Agent7
-
-    Agent5 -->|"Failover LLM Calls"| Providers
-    Providers -->|Token Streams / JSON| Agent7
-    Agent7 -->|"SSE Stream / JSON Response"| UI
+  [ CLIENT LAYER ] - Browser SPA
+  +---------------------------------------------------------------------------------------------+
+  |  React 18 SPA (Vite + Tailwind CSS + Framer Motion)                                         |
+  |  ├── Anonymous Session Generator (Web Crypto UUID v4 -> X-Chat-Session-Id header)           |
+  |  ├── Interactive Chat Stream & Markdown Formatting Engine (Inline Citation Pills)            |
+  |  ├── Knowledge Source Mode Switch (Hybrid Brain vs. Strict to Source)                       |
+  |  └── Client Storage & Exporters (IndexedDB Chat History, Text .txt & PDF .pdf Exports)       |
+  +---------------------------------------------------------------------------------------------+
+                                                |
+                      HTTP API Requests & SSE Real-time Token Stream
+                                                |
+                                                v
+  [ INGESTION & VECTOR LAYER ] - Backend Pipeline
+  +---------------------------------------------------------------------------------------------+
+  |  1. PDF Ingestion & Document Processing                                                     |
+  |     └── Upload Multi-PDF (up to 3 files, cumulative <= 50 MB)                               |
+  |     └── PyPDF Loader -> Text Extraction -> RecursiveCharacterTextSplitter                   |
+  |                                                                                             |
+  |  2. Local Zero-Key Vector Engine                                                            |
+  |     └── HuggingFace sentence-transformers/all-MiniLM-L6-v2 (Runs 100% locally on CPU)        |
+  |     └── FAISS Dense Vector Store (Isolated per X-Chat-Session-Id in faiss_index/sessions/)  |
+  +---------------------------------------------------------------------------------------------+
+                                                |
+                                      Context Vector Retrieval
+                                                |
+                                                v
+  [ REASONING & PIPELINE LAYER ] - 7-Stage Agent Engine
+  +---------------------------------------------------------------------------------------------+
+  |  3. Multi-Agent RAG Orchestration                                                           |
+  |     ├── [Stage 1: Extractor]   -> Top-k similarity retrieval from session FAISS index         |
+  |     ├── [Stage 2: Analyzer]    -> Document context relevance filtering & deduplication      |
+  |     ├── [Stage 3: Preprocess]  -> Text cleaning & prompt normalization                       |
+  |     ├── [Stage 4: Optimizer]   -> Token window trimming & document chunk context packing     |
+  |     ├── [Stage 5: Synthesizer] -> Mode-based prompt construction (Hybrid vs. Strict)        |
+  |     ├── [Stage 6: Validator]   -> Fact grounding & safety validation                        |
+  |     └── [Stage 7: Assembler]   -> Format answer text, metadata & citation pills             |
+  +---------------------------------------------------------------------------------------------+
+                                                |
+                                 Multi-Provider Model API Calls
+                                                |
+                                                v
+  [ AI PROVIDER FAILOVER LAYER ] - 6 Free AI Platforms / 22+ Models
+  +---------------------------------------------------------------------------------------------+
+  |  4. Failover Order: Google Gemini -> Groq LPU -> Cerebras -> SambaNova -> HF -> OpenRouter  |
+  |     ├── Google Gemini: gemini-2.5-flash, gemini-2.5-pro, gemini-2.0-flash                  |
+  |     ├── Groq LPU: llama-3.3-70b-versatile, llama-3.1-8b-instant, deepseek-r1-distill-70b   |
+  |     ├── Cerebras WSE: llama3.3-70b, llama3.1-8b (2000+ tokens/sec)                          |
+  |     ├── SambaNova Cloud: Meta-Llama-3.3-70B-Instruct, DeepSeek-R1-Distill-Llama-70B        |
+  |     ├── Hugging Face: Qwen2.5-Coder-32B-Instruct, Mistral-7B-Instruct                      |
+  |     └── OpenRouter: llama-3.3-70b-instruct:free, deepseek-r1:free, qwen-2.5-72b:free       |
+  +---------------------------------------------------------------------------------------------+
 ```
 
 ---
@@ -396,12 +393,24 @@ VITE_APP_ENV=development
 
 ---
 
-## API Reference
+## API Reference & Interactive Documentation
+
+DocumentRAG provides auto-generated interactive OpenAPI / Swagger UI documentation out of the box when running the backend.
+
+### Interactive API Explorer Endpoints:
+- **Swagger UI Sandbox**: [`http://127.0.0.1:8000/docs`](http://127.0.0.1:8000/docs) (Test endpoints live in your browser)
+- **ReDoc Technical View**: [`http://127.0.0.1:8000/redoc`](http://127.0.0.1:8000/redoc) (Clean structured REST API reference)
+- **Raw OpenAPI Schema**: [`http://127.0.0.1:8000/openapi.json`](http://127.0.0.1:8000/openapi.json) (OpenAPI 3.1 specification)
+
+### API Endpoints Overview:
 
 All protected state endpoints accept an optional `X-Chat-Session-Id` header (UUID v4) for session isolation.
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
+| `GET` | `/docs` | Interactive Swagger UI API documentation & testing sandbox |
+| `GET` | `/redoc` | ReDoc API specification documentation view |
+| `GET` | `/openapi.json` | OpenAPI 3.1 JSON schema definition |
 | `GET` | `/` | System health and API basic info |
 | `GET` | `/health` | Live backend health status check |
 | `GET` | `/models` | List supported AI models & credential availability |

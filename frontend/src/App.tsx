@@ -10,6 +10,7 @@ import { AboutPage } from "@/pages/about";
 import { ApiStatusPage } from "@/pages/api-status";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { GlobalBackground } from "@/components/ui/global-background";
 
 function AppFallback() {
   return (
@@ -35,6 +36,7 @@ function App() {
     <Sentry.ErrorBoundary fallback={<AppFallback />} showDialog>
       <ThemeProvider>
         <BrowserRouter>
+          <GlobalBackground />
           <TooltipProvider delayDuration={350}>
             <Toaster />
             <ScrollToTop />

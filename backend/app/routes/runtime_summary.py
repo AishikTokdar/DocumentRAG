@@ -15,7 +15,7 @@ from ..config import (
 from ..models.schemas import RuntimeProviderRow, RuntimeSummaryResponse
 from ..services.usage_counters import read_counters
 
-router = APIRouter(tags=["API"])
+router = APIRouter(tags=["Runtime Summary & Metrics"])
 
 _PROVIDER_LABELS: dict[str, str] = {
     "openrouter": "OpenRouter",

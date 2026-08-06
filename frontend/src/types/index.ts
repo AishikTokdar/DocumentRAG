@@ -88,6 +88,7 @@ export interface StatusResponse {
   status: string;
   message: string;
   pdf_loaded?: boolean;
+  server_boot_id?: string;
 }
 
 export interface RuntimeProviderRow {

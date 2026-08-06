@@ -9,7 +9,7 @@ from ..config import get_settings
 from ..models import ModelInfo, ModelsResponse, StatusResponse
 from ..services.llm_service import LLMService
 
-router = APIRouter(tags=["Health"])
+router = APIRouter(tags=["Health & Operations"])
 
 
 @router.get("/", response_model=StatusResponse)
@@ -30,13 +30,16 @@ async def health_check():
     """
     Health check endpoint.
     
-    Returns detailed health status including configuration.
+    Returns detailed health status including configuration and server boot ID.
     """
+    from ..main import SERVER_BOOT_ID
+
     settings = get_settings()
     return StatusResponse(
         status="healthy",
         message="All systems operational",
-        model=settings.default_model
+        model=settings.default_model,
+        server_boot_id=SERVER_BOOT_ID,
     )
 
 

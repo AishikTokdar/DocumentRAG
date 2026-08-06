@@ -1,6 +1,6 @@
 import { Globe, Zap, Sparkles, Library, Cpu, Layers } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { GlassCard, GlassCardContent } from "@/components/ui/glass-card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Badge } from "@/components/ui/badge";
 import { SectionWrapper } from "@/components/layout/page-wrapper";
 
@@ -62,10 +62,10 @@ export function ModelsSection() {
     <SectionWrapper id="models">
       <div className="mb-12 text-center">
         <h2 className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight mb-3">
-          100% Free AI Models & Providers
+          Supported AI Models &amp; Providers
         </h2>
         <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
-          Six free-tier AI providers offering sub-second responses with zero costs.
+          Six free-tier AI providers offering sub-second responses with zero costs and automatic failover.
         </p>
       </div>
 
@@ -73,12 +73,14 @@ export function ModelsSection() {
         {providers.map((provider) => {
           const Icon = provider.icon;
           return (
-            <GlassCard key={provider.name} variant="hover" padding="default">
-              <GlassCardContent className="space-y-3">
+            <SpotlightCard key={provider.name} spotlightColor="rgba(59, 130, 246, 0.12)">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200/60 dark:border-blue-800/60 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                       {provider.name}
                     </h3>
                   </div>
@@ -94,15 +96,15 @@ export function ModelsSection() {
                     {provider.models.map((m) => (
                       <span
                         key={m}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700"
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 font-mono"
                       >
                         {m}
                       </span>
                     ))}
                   </div>
                 </div>
-              </GlassCardContent>
-            </GlassCard>
+              </div>
+            </SpotlightCard>
           );
         })}
       </div>

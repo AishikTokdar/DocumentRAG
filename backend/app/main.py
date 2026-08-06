@@ -1,8 +1,10 @@
 """
-FastAPI Application Entry Point
+FastAPI Application Entry Point & Interactive OpenAPI Documentation
 """
 
+import uuid
 from contextlib import asynccontextmanager
+from textwrap import dedent
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,27 +13,23 @@ from .config import get_settings
 from .routes import chat_router, health_router, runtime_summary_router, tunnel_router, upload_router
 from .routes.chat import set_llm_service
 from .routes.upload import set_services as set_upload_services
-from .services.faiss_session_cleanup import prune_stale_session_indexes
+from .services.faiss_session_cleanup import prune_stale_session_indexes, purge_all_session_indexes
 from .services.llm_service import LLMService
 from .services.pdf_processor import PDFProcessor
 from .services.session_vector_registry import SessionVectorRegistry
 
+SERVER_BOOT_ID = str(uuid.uuid4())
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Starting DocumentRAG API...")
+    print(f"Starting DocumentRAG API (Boot ID: {SERVER_BOOT_ID})...")
 
     settings = get_settings()
     pdf_processor = PDFProcessor()
 
-    stale, junk = prune_stale_session_indexes()
-    if settings.faiss_session_max_age_days > 0:
-        print(
-            f"FAISS session cleanup (>{settings.faiss_session_max_age_days}d): "
-            f"{stale} stale, {junk} junk dirs removed"
-        )
-    else:
-        print("FAISS session cleanup: disabled")
+    purged = purge_all_session_indexes()
+    print(f"FAISS server restart purge: removed {purged} session directories")
 
     vector_registry = SessionVectorRegistry(settings.max_vector_sessions)
     llm_service = LLMService()
@@ -55,27 +53,59 @@ async def lifespan(app: FastAPI):
     print("Shutting down...")
 
 
+tags_metadata = [
+    {
+        "name": "Health & Operations",
+        "description": "System health status checks, root endpoints, and operational diagnostics.",
+    },
+    {
+        "name": "Document Ingestion",
+        "description": "Upload PDF documents (up to 3 files, cumulative <= 50 MB) and check indexing status.",
+    },
+    {
+        "name": "RAG Chat & Reasoning",
+        "description": "Submit questions with SSE token streaming, non-streaming JSON, and multi-model support.",
+    },
+    {
+        "name": "Runtime Summary & Metrics",
+        "description": "View provider health metrics, success/failure counts, and model availability dashboards.",
+    },
+    {
+        "name": "Oversight & Monitoring",
+        "description": "Sentry oversight tunnel and telemetry endpoints.",
+    },
+]
+
+API_DESCRIPTION = dedent("""
+Welcome to the **DocumentRAG Interactive OpenAPI Specification**.
+
+DocumentRAG is a state-of-the-art Retrieval-Augmented Generation (RAG) platform supporting multi-document PDF indexing, local zero-key CPU embeddings (`sentence-transformers/all-MiniLM-L6-v2`), FAISS vector search, a 7-stage agent pipeline, and multi-provider AI model failover.
+
+### Key Interactive Documentation Endpoints:
+* **Swagger UI Sandbox**: `/docs` - Interactive API testing & specification sandbox.
+* **ReDoc Technical View**: `/redoc` - Clean reference documentation view.
+* **OpenAPI Schema**: `/openapi.json` - Raw OpenAPI 3.1 JSON specification.
+
+### Key Capabilities:
+* **PDF Ingestion** (`POST /upload`): Upload up to 3 PDF files (cumulative size <= 50 MB).
+* **Real-Time Streaming** (`POST /ask/stream`): Server-Sent Events (SSE) token-by-token streaming responses.
+* **JSON Query** (`POST /ask`): Non-streaming JSON answer with source citations.
+* **Multi-Model Support** (`GET /models`): 22+ models across Google Gemini, Groq, Cerebras, SambaNova, Hugging Face, and OpenRouter.
+* **Knowledge Modes**: `Hybrid Brain` (synthesized world knowledge) vs `Strict to Source` (strict document citations).
+""").strip()
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="DocumentRAG API",
-        description="""
-        Chat with your PDF documents using Retrieval Augmented Generation.
-        
-        ## Features
-        
-        - **PDF Upload**: Upload and process PDF documents
-        - **Smart Retrieval**: Find relevant content using vector similarity
-        - **AI Answers**: Get accurate answers powered by LLMs
-        - **Multi-Model**: Support for multiple AI providers
-        
-        ## Quick Start
-        
-        1. Upload a PDF using `/upload`
-        2. Ask questions using `/ask`
-        """,
+        title="DocumentRAG API Engine",
+        description=API_DESCRIPTION,
         version="1.0.0",
+        openapi_tags=tags_metadata,
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
         lifespan=lifespan,
     )
 

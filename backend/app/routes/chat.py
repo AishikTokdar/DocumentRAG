@@ -23,7 +23,7 @@ from .upload import get_vector_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["Chat"])
+router = APIRouter(tags=["RAG Chat & Reasoning"])
 
 # Global LLM service
 _llm_service: LLMService | None = None

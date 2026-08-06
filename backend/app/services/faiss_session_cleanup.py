@@ -75,3 +75,27 @@ def prune_stale_session_indexes() -> tuple[int, int]:
             removed_junk,
         )
     return (removed_stale, removed_junk)
+
+
+def purge_all_session_indexes() -> int:
+    """
+    Completely removes all FAISS session vector index directories on server startup.
+    Ensures vector indexes and document sessions reset every time the server restarts.
+    """
+    root = VectorStoreService.sessions_directory()
+    if not os.path.isdir(root):
+        return 0
+
+    count = 0
+    for name in os.listdir(root):
+        path = os.path.join(root, name)
+        if os.path.isdir(path):
+            try:
+                shutil.rmtree(path, ignore_errors=True)
+                count += 1
+            except OSError as exc:
+                logger.warning("Could not purge session dir %s: %s", path, exc)
+
+    logger.info("FAISS server restart purge: removed %d session directories", count)
+    return count
+

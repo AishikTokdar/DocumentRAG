@@ -16,7 +16,7 @@ from ..services.session_vector_registry import SessionVectorRegistry, is_valid_s
 from ..services.usage_counters import increment_pdf_uploads
 from ..services.vector_store import VectorStoreService
 
-router = APIRouter(tags=["Upload"])
+router = APIRouter(tags=["Document Ingestion"])
 
 # Global services (initialized in main.py and injected)
 _pdf_processor: PDFProcessor | None = None
@@ -153,6 +153,8 @@ async def get_status(
     """
     Get current system status for this browser session.
     """
+    from ..main import SERVER_BOOT_ID
+
     settings = get_settings()
     is_ready = vector_service.is_ready
 
@@ -164,4 +166,5 @@ async def get_status(
         pdf_loaded=is_ready,
         model=settings.default_model,
         documents_loaded=1 if is_ready else 0,
+        server_boot_id=SERVER_BOOT_ID,
     )

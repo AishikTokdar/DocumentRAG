@@ -27,6 +27,7 @@ import { ChatInput } from "./chat-input";
 import { ModelSelector } from "./model-selector";
 import { usePDFUpload } from "@/hooks/use-pdf-upload";
 import { useChat } from "@/hooks/use-chat";
+import { api } from "@/lib/api";
 import { AI_MODELS, type AIModel, type ChatEntry } from "@/types";
 import {
   loadPreference,
@@ -294,6 +295,35 @@ export function ChatContainer() {
     listChatSessions().then(setSessions);
   }, [chatHistory, fileName, showSessions]);
 
+  // Detect server restart via server_boot_id and reset browser document history
+  React.useEffect(() => {
+    let isMounted = true;
+    api
+      .getStatus()
+      .then((statusData) => {
+        if (!isMounted) return;
+        const currentBootId = statusData.server_boot_id;
+        if (currentBootId) {
+          const storedBootId = localStorage.getItem("doc_rag_server_boot_id");
+          if (storedBootId && storedBootId !== currentBootId) {
+            clearAllSessions().then(() => {
+              setSessions([]);
+              clearHistory();
+              setActiveSessionName(null);
+            });
+          }
+          localStorage.setItem("doc_rag_server_boot_id", currentBootId);
+        }
+      })
+      .catch(() => {
+        // Backend offline or unreachable
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [clearHistory]);
+
   const scrollToBottom = React.useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
@@ -416,10 +446,21 @@ export function ChatContainer() {
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 flex items-center justify-between">
                     <span className="flex items-center gap-1.5 font-semibold">
-                      <Brain className="w-3.5 h-3.5 text-purple-500" />
+                      {hybridMode ? (
+                        <Brain className="w-3.5 h-3.5 text-purple-500" />
+                      ) : (
+                        <BookOpen className="w-3.5 h-3.5 text-emerald-500" />
+                      )}
                       Knowledge Source Mode
                     </span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-mono font-medium">
+                    <span
+                      className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold border transition-colors",
+                        hybridMode
+                          ? "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-300/40 dark:border-purple-800/60"
+                          : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300/40 dark:border-emerald-800/60",
+                      )}
+                    >
                       {hybridMode ? "Hybrid Brain" : "Strict to Source"}
                     </span>
                   </label>
