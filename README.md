@@ -20,12 +20,17 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
 - [Core Capabilities](#core-capabilities)
 - [System Architecture & Data Flow](#system-architecture--data-flow)
 - [Component Breakdown & Context](#component-breakdown--context)
-- [Docker & Docker Compose Deployment](#docker--docker-compose-deployment)
+- [Smart Zero-Config Defaults Architecture](#smart-zero-config-defaults-architecture)
+- [Deployment Guides](#deployment-guides)
+  - [Option 1: Hugging Face Spaces (Full Docker)](#option-1-hugging-face-spaces-full-docker)
+  - [Option 2: Vercel (Frontend) + Render (Backend)](#option-2-vercel-frontend--render-backend)
+  - [Option 3: Railway (Full-Stack Docker Container)](#option-3-railway-full-stack-docker-container)
+  - [Option 4: Koyeb (Serverless Docker Container)](#option-4-koyeb-serverless-docker-container)
+  - [Option 5: Docker & Docker Compose (Local / Self-Hosted)](#option-5-docker--docker-compose-local--self-hosted)
 - [Local Bash Deployment Guide](#local-bash-deployment-guide)
-- [Remote Platform Deployment Guide](#remote-platform-deployment-guide)
-- [Free AI API Keys Guide](#free-ai-api-keys-guide)
-- [Environment Configuration (.env)](#environment-configuration-env)
-- [API Reference](#api-reference)
+- [Supported AI Models & API Keys Guide](#supported-ai-models--api-keys-guide)
+- [Environment Configuration (.env Reference)](#environment-configuration-env-reference)
+- [API Reference & Interactive Documentation](#api-reference--interactive-documentation)
 - [Tech Stack](#tech-stack)
 - [License](#license)
 
@@ -37,7 +42,7 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
 - **Dual Knowledge Modes**:
   - **Hybrid Brain Mode**: Combines retrieved PDF citations with the AI's internal pretrained world knowledge for synthesized reasoning.
   - **Strict to Source Mode**: Enforces strict adherence to PDF context only, stating when information is absent.
-- **Local Zero-Key Embeddings**: Uses HuggingFace `sentence-transformers/all-MiniLM-L6-v2` running on CPU for vector embeddings, requiring zero external embedding API keys.
+- **Local Zero-Key Embeddings**: Uses Hugging Face `sentence-transformers/all-MiniLM-L6-v2` running on CPU for vector embeddings, requiring zero external embedding API keys.
 - **7-Stage Multi-Agent Pipeline**: Executes Extractor, Analyzer, Preprocessor, Optimizer, Synthesizer, Validator, and Assembler stages for maximum answer grounding and reliability.
 - **Multi-Provider Failover**: Automatically switches between Google Gemini, Groq, Cerebras, SambaNova, Hugging Face, and OpenRouter if a key or model hits rate limits.
 - **SSE Token Streaming**: Real-time token-by-token streaming responses over Server-Sent Events.
@@ -94,7 +99,7 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
                                  Multi-Provider Model API Calls
                                                 |
                                                 v
-  [ AI PROVIDER FAILOVER LAYER ] - 6 Free AI Platforms / 22+ Models
+  [ AI PROVIDER FAILOVER LAYER ] - 6 AI Platforms / 22+ Models
   +---------------------------------------------------------------------------------------------+
   |  4. Failover Order: Google Gemini -> Groq LPU -> Cerebras -> SambaNova -> HF -> OpenRouter  |
   |     ├── Google Gemini: gemini-2.5-flash, gemini-2.5-pro, gemini-2.0-flash                  |
@@ -120,7 +125,7 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
 
 ### 3. Local CPU Embedding Service (`sentence-transformers`)
 - **Context in Project**: Converts extracted text chunks into 384-dimensional dense vector representations.
-- **Key Responsibilities**: Operates locally on CPU using `sentence-transformers/all-MiniLM-L6-v2`. This eliminates third-party embedding API costs, eliminates embedding quota errors, and allows full zero-key document ingestion.
+- **Key Responsibilities**: Operates locally on CPU using `sentence-transformers/all-MiniLM-L6-v2`. This eliminates third-party embedding API costs, eliminates embedding quota errors, and allows zero-key document ingestion.
 
 ### 4. FAISS Vector Store Engine
 - **Context in Project**: Acts as the fast vector search index for similarity retrieval.
@@ -137,51 +142,183 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
   6. **Validator**: Checks generated output for safety and factual grounding.
   7. **Assembler**: Packages the final response with model metadata and citation pills.
 
-### 6. Dual Knowledge Modes (`Hybrid Brain` vs `Strict to Source`)
-- **Context in Project**: Gives users precise control over how AI model knowledge is synthesized.
-- **Key Responsibilities**:
-  - **Hybrid Brain Mode**: Instructs the LLM to combine PDF citations with its pretrained world knowledge for in-depth explanation (NotebookLM style).
-  - **Strict to Source Mode**: Restricts the LLM to only answer using text explicitly present in the PDF documents.
+---
 
-### 7. Multi-Provider LLM Failover Manager
-- **Context in Project**: Guarantees maximum uptime and reliability across free-tier AI model APIs.
-- **Key Responsibilities**: If a provider returns a rate limit (HTTP 429) or error, the backend seamlessly switches to the next available provider in order (Gemini -> Groq -> Cerebras -> SambaNova -> Hugging Face -> OpenRouter) without failing the user request.
+## Smart Zero-Config Defaults Architecture
+
+DocumentRAG is built with **Smart Zero-Config Defaults**. You do **not** need to fill out a long `.env` file with dozens of technical variables.
+
+### How It Works:
+1. **You Only Supply API Keys**: All you need to supply in your deployment environment is at least one AI provider API key (such as `GOOGLE_API_KEY` or `GROQ_API_KEY`).
+2. **Pre-configured Defaults**: All system settings automatically fallback to optimal built-in default values:
+   - `CORS_ORIGINS`: Defaults to wildcard `*` or local dev URLs (`http://localhost:5173`).
+   - `FAISS_PERSIST_DIR`: Defaults to `faiss_index`.
+   - `CHUNK_SIZE`: Defaults to `1000`.
+   - `CHUNK_OVERLAP`: Defaults to `200`.
+   - `RETRIEVAL_K`: Defaults to `4`.
+   - `MAX_VECTOR_SESSIONS`: Defaults to `64`.
+   - `FAISS_SESSION_MAX_AGE_DAYS`: Defaults to `3`.
+   - `RATE_LIMIT_UPLOAD_PER_MINUTE`: Defaults to `8`.
+   - `RATE_LIMIT_ASK_PER_MINUTE`: Defaults to `90`.
+3. **Optional Overrides**: If you want to customize any of these values, you can set them in your environment variables. Otherwise, leave them unset and the system handles them automatically.
 
 ---
 
-## Docker & Docker Compose Deployment
+## Deployment Guides
 
-DocumentRAG includes full Docker and Docker Compose support for single-command production deployment.
+DocumentRAG supports multiple cloud deployment strategies depending on your infrastructure requirements.
 
-### 1. Prerequisites
-- Docker Engine 20.10+
-- Docker Compose v2+
+### Option 1: Hugging Face Spaces (Full Docker)
 
-### 2. Configure Environment
-Create a `.env` file in `backend/.env`:
+Deploy the full-stack application (Frontend SPA + FastAPI Backend) inside a single container on Hugging Face Spaces.
 
-```bash
-cd backend
-cp .env.example .env
-# Edit .env and insert your API keys (e.g. GOOGLE_API_KEY, GROQ_API_KEY)
+#### Step 1: Create a New Space
+1. Log in to [Hugging Face](https://huggingface.co/).
+2. Click your profile picture -> **New Space**.
+3. Set Space Name: `DocumentRAG`.
+4. Select **Docker** as the Space SDK.
+5. Choose **Blank** template.
+
+#### Step 2: Configure Environment Secrets (Security Rule)
+> [!IMPORTANT]
+> Hugging Face Spaces repositories are public by default. **NEVER** commit `.env` files or API keys into git or push them to Hugging Face.
+
+1. Navigate to **Settings** -> **Variables and secrets** in your Space dashboard.
+2. Add your secrets under **Repository secrets**:
+   - `GOOGLE_API_KEY`: Your Google Gemini API key
+   - `GROQ_API_KEY`: Your Groq API key
+   - `CEREBRAS_API_KEY`: Your Cerebras API key
+   - `SAMBANOVA_API_KEY`: Your SambaNova API key
+   - `HF_API_KEY`: Your Hugging Face token
+   - `OPENROUTER_API_KEY`: Your OpenRouter API key
+   - `CORS_ORIGINS`: `*`
+
+#### Step 3: Add Dockerfile
+Create a `Dockerfile` in your repository root:
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install Node.js & system dependencies
+RUN apt-get update && apt-get install -y curl nodejs npm && rm -rf /var/lib/apt/lists/*
+
+# Install backend dependencies
+COPY backend /app/backend
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+
+# Build frontend production bundle
+COPY frontend /app/frontend
+WORKDIR /app/frontend
+RUN npm install && npm run build
+
+WORKDIR /app/backend
+
+# Hugging Face Spaces default HTTP port
+EXPOSE 7860
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
 ```
 
-### 3. Launch Application
-From the repository root, run:
-
+#### Step 4: Deploy
+Push your code to Hugging Face:
 ```bash
-docker compose up --build
+git remote add hf https://huggingface.co/spaces/YOUR_USERNAME/DocumentRAG
+git push hf main
 ```
 
-### 4. Access Services
-- **Frontend SPA**: `http://localhost:5173`
-- **Backend API**: `http://localhost:8000`
-- **API Documentation**: `http://localhost:8000/docs`
+---
 
-To stop the containers, run:
-```bash
-docker compose down
-```
+### Option 2: Vercel (Frontend) + Render (Backend)
+
+Decouple the frontend Single Page Application (CDN) from the Python ASGI backend service.
+
+#### Step 1: Deploy Backend to Render
+1. Log in to [Render](https://render.com/).
+2. Click **New +** -> **Web Service**.
+3. Select your repository and set **Root Directory**: `backend`.
+4. Build & Runtime settings:
+   - **Environment**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+5. Configure Environment Variables in Render Control Panel:
+   - `GOOGLE_API_KEY` = `your_key`
+   - `GROQ_API_KEY` = `your_key`
+   - `CORS_ORIGINS` = `*` (or `https://your-app.vercel.app`)
+6. Copy your deployed Render service URL (e.g. `https://documentrag-backend.onrender.com`).
+
+#### Step 2: Deploy Frontend to Vercel
+1. Log in to [Vercel](https://vercel.com/).
+2. Click **Add New...** -> **Project** and import your repository.
+3. Set **Root Directory**: `frontend`.
+4. **Framework Preset**: Vite.
+5. Environment Variables:
+   - `VITE_API_BASE_URL` = `https://documentrag-backend.onrender.com`
+6. Click **Deploy**.
+
+---
+
+### Option 3: Railway (Full-Stack Docker Container)
+
+Deploy DocumentRAG as a single container service on Railway.
+
+#### Step 1: Connect Repository
+1. Log in to [Railway](https://railway.app/).
+2. Click **New Project** -> **Deploy from GitHub repo**.
+3. Select your `DocumentRAG` repository.
+
+#### Step 2: Configure Environment Variables
+In Railway Dashboard -> **Variables**, add:
+- `GOOGLE_API_KEY`: Your Gemini API key
+- `GROQ_API_KEY`: Your Groq API key
+- `CORS_ORIGINS`: `*`
+- `PORT`: `8000`
+
+#### Step 3: Railway Build Settings
+1. In **Settings** -> **Build**, Railway automatically detects the root `Dockerfile`.
+2. Generate a Domain under **Networking** to expose the public endpoint.
+
+---
+
+### Option 4: Koyeb (Serverless Docker Container)
+
+Deploy DocumentRAG on Koyeb's serverless container infrastructure.
+
+#### Step 1: Create Koyeb Service
+1. Log in to [Koyeb](https://www.koyeb.com/).
+2. Click **Create Service** -> **GitHub**.
+3. Select your `DocumentRAG` repository.
+
+#### Step 2: Environment & Builder Setup
+1. Builder: **Dockerfile**.
+2. Environment Variables:
+   - `GOOGLE_API_KEY`: `your_key`
+   - `GROQ_API_KEY`: `your_key`
+   - `CORS_ORIGINS`: `*`
+3. Port Exposure: HTTP Port `8000` / Path `/`.
+4. Click **Deploy**.
+
+---
+
+### Option 5: Docker & Docker Compose (Local / Self-Hosted)
+
+For single-command local testing or deployment on VPS servers (Coolify, Hetzner, AWS EC2).
+
+1. Create `backend/.env`:
+   ```bash
+   cd backend
+   cp .env.example .env
+   # Add your AI API key(s)
+   ```
+2. Launch containers:
+   ```bash
+   docker compose up --build
+   ```
+3. Access points:
+   - **Frontend**: `http://localhost:5173`
+   - **Backend**: `http://localhost:8000`
+   - **OpenAPI Docs**: `http://localhost:8000/docs`
 
 ---
 
@@ -200,111 +337,31 @@ cd DocumentRAG
 
 ### 2. Backend Setup
 ```bash
-# Navigate to backend directory
 cd backend
-
-# Create virtual environment
 python3 -m venv .venv
-
-# Activate virtual environment
-# On Linux/macOS:
-source .venv/bin/activate
-# On Windows Bash:
-source .venv/Scripts/activate
-
-# Upgrade pip and install dependencies
+source .venv/bin/activate  # On Windows: source .venv/Scripts/activate
 pip install --upgrade pip
 pip install -r requirements.txt
-
-# Configure environment variables
 cp .env.example .env
-
-# Run backend development server
+# Add GOOGLE_API_KEY or GROQ_API_KEY in backend/.env
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
-The FastAPI backend will run at `http://127.0.0.1:8000`.
 
 ### 3. Frontend Setup (New Terminal)
 ```bash
-# Navigate to frontend directory
 cd frontend
-
-# Install Node dependencies
 npm install
-
-# Configure environment variables
 cp .env.example .env
-
-# Launch Vite development server
 npm run dev
 ```
-The React SPA frontend will run at `http://localhost:5173`.
 
 ---
 
-## Remote Platform Deployment Guide
+## Supported AI Models & API Keys Guide
 
-### Option 1: Frontend on Vercel + Backend on Render
-
-#### Deploy Backend to Render
-1. Push your repository to GitHub.
-2. Log in to [Render](https://render.com/).
-3. Click **New +** -> **Web Service**.
-4. Select the `backend` subfolder as the Root Directory.
-5. Set Build & Runtime settings:
-   - **Environment**: Python 3
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-6. Add Environment Variables (`GOOGLE_API_KEY`, `GROQ_API_KEY`, etc.).
-7. Set `CORS_ORIGINS=https://your-app.vercel.app`.
-
-#### Deploy Frontend to Vercel
-1. Log in to [Vercel](https://vercel.com/).
-2. Import your GitHub repository and select `frontend` as Root Directory.
-3. Framework Preset: **Vite**.
-4. Build Command: `npm run build`.
-5. Environment Variable:
-   - Name: `VITE_API_BASE_URL`
-   - Value: `https://your-backend.onrender.com`
-
----
-
-### Option 2: Hugging Face Spaces (Free Docker Deployment)
-
-1. Create a new Space on [Hugging Face Spaces](https://huggingface.co/new-space).
-2. Select **Docker** as the Space SDK.
-3. In your Space repository, create a `Dockerfile`:
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y curl nodejs npm && rm -rf /var/lib/apt/lists/*
-
-COPY backend /app/backend
-RUN pip install --no-cache-dir -r /app/backend/requirements.txt
-
-COPY frontend /app/frontend
-WORKDIR /app/frontend
-RUN npm install && npm run build
-
-WORKDIR /app/backend
-EXPOSE 7860
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
-```
-
-4. Add your API key secrets in Space Settings.
-
----
-
-## Free AI API Keys Guide
-
-DocumentRAG supports 6 free-tier AI providers offering access to over 22 free models. At least one valid API key must be configured in your backend environment.
+DocumentRAG supports 6 AI providers offering access to over 22 models. You only need to configure at least one valid key in your environment.
 
 ### 1. Google Gemini API Key (`GOOGLE_API_KEY`)
-- **Cost**: Free tier available (Google AI Studio).
 - **Supported Models**: `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`.
 - **How to Get**:
   1. Visit [Google AI Studio](https://aistudio.google.com/).
@@ -312,35 +369,30 @@ DocumentRAG supports 6 free-tier AI providers offering access to over 22 free mo
   3. Click **Get API Key** -> **Create API key in new project** and copy the key.
 
 ### 2. Groq LPU API Key (`GROQ_API_KEY`)
-- **Cost**: Free tier with high speed LPU inference.
 - **Supported Models**: `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `mixtral-8x7b-32768`, `deepseek-r1-distill-llama-70b`.
 - **How to Get**:
   1. Visit [Groq Console](https://console.groq.com/).
   2. Navigate to **API Keys** -> **Create API Key** and copy the key.
 
 ### 3. Cerebras Wafer-Scale Engine Key (`CEREBRAS_API_KEY`)
-- **Cost**: Free Developer Tier (2000+ tokens/sec).
 - **Supported Models**: `llama3.3-70b`, `llama3.1-8b`.
 - **How to Get**:
   1. Visit [Cerebras Cloud Console](https://cloud.cerebras.ai/).
   2. Go to **API Keys** -> **Create New Key** and copy the key.
 
 ### 4. SambaNova Cloud Key (`SAMBANOVA_API_KEY`)
-- **Cost**: Free tier access to SN40L chips.
 - **Supported Models**: `Meta-Llama-3.3-70B-Instruct`, `DeepSeek-R1-Distill-Llama-70B`, `Qwen2.5-72B-Instruct`.
 - **How to Get**:
   1. Visit [SambaNova Cloud Portal](https://cloud.sambanova.ai/).
   2. Access **API Keys** and generate your key.
 
 ### 5. Hugging Face Access Token (`HF_API_KEY`)
-- **Cost**: Free Serverless Inference API.
 - **Supported Models**: `Qwen/Qwen2.5-Coder-32B-Instruct`, `mistralai/Mistral-7B-Instruct-v0.3`.
 - **How to Get**:
   1. Visit [Hugging Face Settings Tokens](https://huggingface.co/settings/tokens).
   2. Click **Create new token** (Role: Read) and copy the token.
 
-### 6. OpenRouter Free Key (`OPENROUTER_API_KEY`)
-- **Cost**: Free tier models with 0 credit requirement.
+### 6. OpenRouter Key (`OPENROUTER_API_KEY`)
 - **Supported Models**: `meta-llama/llama-3.3-70b-instruct:free`, `deepseek/deepseek-r1:free`, `qwen/qwen-2.5-72b-instruct:free`.
 - **How to Get**:
   1. Visit [OpenRouter Keys](https://openrouter.ai/keys).
@@ -348,20 +400,26 @@ DocumentRAG supports 6 free-tier AI providers offering access to over 22 free mo
 
 ---
 
-## Environment Configuration (.env)
+## Environment Configuration (.env Reference)
 
-### Backend Environment Setup (`backend/.env`)
+### Minimum Backend Environment (`backend/.env`)
+Only your chosen API keys are required:
+```env
+GOOGLE_API_KEY=your_google_gemini_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
+```
 
+### Full Optional Backend Configuration Reference (`backend/.env`)
 ```env
 # Server Settings
 HOST=0.0.0.0
 PORT=8000
 ENVIRONMENT=production
 
-# CORS Origins
-CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://your-frontend.vercel.app
+# CORS Origins (Use * or comma-separated origins)
+CORS_ORIGINS=*
 
-# Free AI API Keys (Configure at least one)
+# AI API Keys (Configure at least one)
 GOOGLE_API_KEY=your_google_gemini_api_key_here
 GROQ_API_KEY=your_groq_api_key_here
 CEREBRAS_API_KEY=your_cerebras_api_key_here
@@ -379,28 +437,26 @@ FAISS_PERSIST_DIR=faiss_index
 MAX_VECTOR_SESSIONS=64
 FAISS_SESSION_MAX_AGE_DAYS=3
 
-# IP Rate Limits
+# IP Rate Limits (0 to disable)
 RATE_LIMIT_UPLOAD_PER_MINUTE=8
 RATE_LIMIT_ASK_PER_MINUTE=90
 ```
 
-### Frontend Environment Setup (`frontend/.env`)
-
+### Frontend Environment Reference (`frontend/.env`)
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:8000
-VITE_APP_ENV=development
 ```
 
 ---
 
 ## API Reference & Interactive Documentation
 
-DocumentRAG provides auto-generated interactive OpenAPI / Swagger UI documentation out of the box when running the backend.
+DocumentRAG provides auto-generated interactive OpenAPI / Swagger UI documentation out of the box.
 
 ### Interactive API Explorer Endpoints:
-- **Swagger UI Sandbox**: [`http://127.0.0.1:8000/docs`](http://127.0.0.1:8000/docs) (Test endpoints live in your browser)
-- **ReDoc Technical View**: [`http://127.0.0.1:8000/redoc`](http://127.0.0.1:8000/redoc) (Clean structured REST API reference)
-- **Raw OpenAPI Schema**: [`http://127.0.0.1:8000/openapi.json`](http://127.0.0.1:8000/openapi.json) (OpenAPI 3.1 specification)
+- **Swagger UI Sandbox**: [`http://127.0.0.1:8000/docs`](http://127.0.0.1:8000/docs)
+- **ReDoc Technical View**: [`http://127.0.0.1:8000/redoc`](http://127.0.0.1:8000/redoc)
+- **Raw OpenAPI Schema**: [`http://127.0.0.1:8000/openapi.json`](http://127.0.0.1:8000/openapi.json)
 
 ### API Endpoints Overview:
 

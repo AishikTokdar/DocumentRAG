@@ -220,7 +220,9 @@ class Settings(BaseSettings):
         raw = self.cors_origins_csv
         if not raw or not raw.strip():
             return list(_DEFAULT_CORS_ORIGINS)
-        parts = [p.strip() for p in raw.split(",") if p.strip()]
+        parts = [p.strip().rstrip("/") for p in raw.split(",") if p.strip()]
+        if "*" in parts or "*" in raw:
+            return ["*"]
         return parts if parts else list(_DEFAULT_CORS_ORIGINS)
 
     # File upload settings
