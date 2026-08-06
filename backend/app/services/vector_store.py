@@ -5,9 +5,18 @@ Manages FAISS vector store for document embeddings and retrieval.
 Supports saving and loading the index from disk for persistence.
 """
 
+import gc
 import logging
 import os
 from typing import Any, cast
+
+# Restrict OpenMP / PyTorch / BLAS thread pools to prevent RAM spikes on 512MB free tier containers
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -230,6 +239,7 @@ class VectorStoreService:
             self.vectorstore = FAISS.from_documents(documents, emb)
             self.embeddings = emb
             self.save_to_disk()
+            gc.collect()
             logger.info("Vector index built with local CPU embeddings (MiniLM)")
             return len(documents)
         except Exception as exc:

@@ -179,12 +179,22 @@ Decouple the frontend Single Page Application (CDN) from the Python ASGI backend
 4. Build & Runtime settings:
    - **Environment**: `Python 3`
    - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Start Command**: `sh -c 'uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}'`
 5. Configure Environment Variables in Render Control Panel:
    - `GOOGLE_API_KEY` = `your_gemini_key`
    - `GROQ_API_KEY` = `your_groq_key`
    - `CORS_ORIGINS` = `*` (or `https://your-app.vercel.app`)
+   - `PYTHONUNBUFFERED` = `1`
+   - `WEB_CONCURRENCY` = `1`
+   - `MALLOC_TRIM_THRESHOLD_` = `100000`
 6. Copy your deployed Render service URL (e.g. `https://documentrag-backend.onrender.com`).
+
+> [!NOTE]
+> **Render Memory & Port Troubleshooting (512MB RAM Free Tier):**
+> Render's free instance enforces a strict **512 MB RAM limit**. DocumentRAG automatically restricts PyTorch, OpenMP, and Hugging Face thread pools to single-thread mode (`OMP_NUM_THREADS=1`) and triggers Python garbage collection (`gc.collect()`). To guarantee your Render service stays under 200 MB RAM and never gets OOM-killed:
+> 1. Set Environment Variable `WEB_CONCURRENCY=1` (prevents Uvicorn worker duplication).
+> 2. Set Environment Variable `MALLOC_TRIM_THRESHOLD_=100000` (forces C memory unmapping back to OS).
+> 3. Initial cold boot takes 10-20s for Python dependencies (`PyPDF`, `LangChain`, `SentenceTransformers`) to load. Render's health scanner will log `No open ports detected, continuing to scan...` during warm-up, and automatically report `Port 10000 open! Your service is live` once socket binding completes.
 
 #### Step 2: Deploy Frontend to Vercel
 1. Log in to [Vercel](https://vercel.com/).
