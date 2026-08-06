@@ -22,11 +22,11 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
 - [Component Breakdown & Context](#component-breakdown--context)
 - [Smart Zero-Config Defaults Architecture](#smart-zero-config-defaults-architecture)
 - [Deployment Guides](#deployment-guides)
-  - [Option 1: Hugging Face Spaces (Full Docker)](#option-1-hugging-face-spaces-full-docker)
-  - [Option 2: Vercel (Frontend) + Render (Backend)](#option-2-vercel-frontend--render-backend)
-  - [Option 3: Railway (Full-Stack Docker Container)](#option-3-railway-full-stack-docker-container)
-  - [Option 4: Koyeb (Serverless Docker Container)](#option-4-koyeb-serverless-docker-container)
-  - [Option 5: Docker & Docker Compose (Local / Self-Hosted)](#option-5-docker--docker-compose-local--self-hosted)
+  - [Option 1: Vercel (Frontend) + Render (Backend)](#option-1-vercel-frontend--render-backend)
+  - [Option 2: Railway (Full-Stack Container)](#option-2-railway-full-stack-container)
+  - [Option 3: Koyeb (Serverless Container Platform)](#option-3-koyeb-serverless-container-platform)
+  - [Option 4: Fly.io (Micro Container Deployment)](#option-4-flyio-micro-container-deployment)
+  - [Option 5: Docker & Docker Compose (Local / Self-Hosted / Coolify)](#option-5-docker--docker-compose-local--self-hosted--coolify)
 - [Local Bash Deployment Guide](#local-bash-deployment-guide)
 - [Supported AI Models & API Keys Guide](#supported-ai-models--api-keys-guide)
 - [Environment Configuration (.env Reference)](#environment-configuration-env-reference)
@@ -166,71 +166,9 @@ DocumentRAG is built with **Smart Zero-Config Defaults**. You do **not** need to
 
 ## Deployment Guides
 
-DocumentRAG supports multiple cloud deployment strategies depending on your infrastructure requirements.
+DocumentRAG supports multiple cloud deployment strategies depending on your target infrastructure.
 
-### Option 1: Hugging Face Spaces (Full Docker)
-
-Deploy the full-stack application (Frontend SPA + FastAPI Backend) inside a single container on Hugging Face Spaces.
-
-#### Step 1: Create a New Space
-1. Log in to [Hugging Face](https://huggingface.co/).
-2. Click your profile picture -> **New Space**.
-3. Set Space Name: `DocumentRAG`.
-4. Select **Docker** as the Space SDK.
-5. Choose **Blank** template.
-
-#### Step 2: Configure Environment Secrets (Security Rule)
-> [!IMPORTANT]
-> Hugging Face Spaces repositories are public by default. **NEVER** commit `.env` files or API keys into git or push them to Hugging Face.
-
-1. Navigate to **Settings** -> **Variables and secrets** in your Space dashboard.
-2. Add your secrets under **Repository secrets**:
-   - `GOOGLE_API_KEY`: Your Google Gemini API key
-   - `GROQ_API_KEY`: Your Groq API key
-   - `CEREBRAS_API_KEY`: Your Cerebras API key
-   - `SAMBANOVA_API_KEY`: Your SambaNova API key
-   - `HF_API_KEY`: Your Hugging Face token
-   - `OPENROUTER_API_KEY`: Your OpenRouter API key
-   - `CORS_ORIGINS`: `*`
-
-#### Step 3: Add Dockerfile
-Create a `Dockerfile` in your repository root:
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install Node.js & system dependencies
-RUN apt-get update && apt-get install -y curl nodejs npm && rm -rf /var/lib/apt/lists/*
-
-# Install backend dependencies
-COPY backend /app/backend
-RUN pip install --no-cache-dir -r /app/backend/requirements.txt
-
-# Build frontend production bundle
-COPY frontend /app/frontend
-WORKDIR /app/frontend
-RUN npm install && npm run build
-
-WORKDIR /app/backend
-
-# Hugging Face Spaces default HTTP port
-EXPOSE 7860
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
-```
-
-#### Step 4: Deploy
-Push your code to Hugging Face:
-```bash
-git remote add hf https://huggingface.co/spaces/YOUR_USERNAME/DocumentRAG
-git push hf main
-```
-
----
-
-### Option 2: Vercel (Frontend) + Render (Backend)
+### Option 1: Vercel (Frontend) + Render (Backend)
 
 Decouple the frontend Single Page Application (CDN) from the Python ASGI backend service.
 
@@ -243,8 +181,8 @@ Decouple the frontend Single Page Application (CDN) from the Python ASGI backend
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 5. Configure Environment Variables in Render Control Panel:
-   - `GOOGLE_API_KEY` = `your_key`
-   - `GROQ_API_KEY` = `your_key`
+   - `GOOGLE_API_KEY` = `your_gemini_key`
+   - `GROQ_API_KEY` = `your_groq_key`
    - `CORS_ORIGINS` = `*` (or `https://your-app.vercel.app`)
 6. Copy your deployed Render service URL (e.g. `https://documentrag-backend.onrender.com`).
 
@@ -259,7 +197,7 @@ Decouple the frontend Single Page Application (CDN) from the Python ASGI backend
 
 ---
 
-### Option 3: Railway (Full-Stack Docker Container)
+### Option 2: Railway (Full-Stack Container)
 
 Deploy DocumentRAG as a single container service on Railway.
 
@@ -281,7 +219,7 @@ In Railway Dashboard -> **Variables**, add:
 
 ---
 
-### Option 4: Koyeb (Serverless Docker Container)
+### Option 3: Koyeb (Serverless Container Platform)
 
 Deploy DocumentRAG on Koyeb's serverless container infrastructure.
 
@@ -301,9 +239,31 @@ Deploy DocumentRAG on Koyeb's serverless container infrastructure.
 
 ---
 
-### Option 5: Docker & Docker Compose (Local / Self-Hosted)
+### Option 4: Fly.io (Micro Container Deployment)
 
-For single-command local testing or deployment on VPS servers (Coolify, Hetzner, AWS EC2).
+Deploy DocumentRAG globally using Fly.io micro-VM containers.
+
+#### Step 1: Install Fly CLI & Launch
+```bash
+fly launch --no-deploy
+```
+
+#### Step 2: Configure Secrets
+Set API key secrets safely using Fly CLI (prevents key leakage in configuration files):
+```bash
+fly secrets set GOOGLE_API_KEY="your_key" GROQ_API_KEY="your_key" CORS_ORIGINS="*"
+```
+
+#### Step 3: Deploy
+```bash
+fly deploy
+```
+
+---
+
+### Option 5: Docker & Docker Compose (Local / Self-Hosted / Coolify)
+
+For single-command local testing or deployment on self-hosted VPS servers (Coolify, Hetzner, AWS EC2, DigitalOcean).
 
 1. Create `backend/.env`:
    ```bash
