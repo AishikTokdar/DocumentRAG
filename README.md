@@ -165,137 +165,127 @@ DocumentRAG is built with **Smart Zero-Config Defaults**. You do **not** need to
 
 ## Deployment Guides
 
-### Option 1: Hugging Face Spaces (Python SDK - 100% Free, No Docker Needed)
+### Option 1: Hugging Face Spaces (Backend ZeroGPU Gradio)
 
-Hugging Face Spaces provides a **100% FREE CPU Basic tier (2 vCPU • 16 GB RAM)** with **zero credit card required** when using the native **Python SDK** (no Docker required).
+Hugging Face Spaces provides a **100% FREE Tier (2 vCPU • 16 GB RAM / ZeroGPU Hardware)** with **zero credit card required** when using the native **Gradio SDK** (Python environment).
+
+#### Key Deployment Architecture:
+- **`app.py`**: Entrypoint for Hugging Face Spaces. Uses `@spaces.GPU` probe to register with ZeroGPU hardware scheduling and mounts the FastAPI application (`from app.main import app as fastapi_app`) via `gr.mount_gradio_app(fastapi_app, demo, path="/", ssr_mode=False)`.
+- **`gradio_app.py`**: Standalone native Gradio 5.x UI dashboard featuring PDF uploading, RAG chat, model selector, and system health tabs.
+- **REST API Endpoints**: Exposes interactive Swagger UI at `/docs` and ReDoc at `/redoc`.
 
 #### Step 1: Create a Space on Hugging Face
 1. Log in to [Hugging Face](https://huggingface.co/) (Create a free account if needed).
 2. Go to [huggingface.co/new-space](https://huggingface.co/new-space).
 3. **Space Name**: `documentrag-backend`.
 4. **License**: `mit`.
-5. **Select the Space SDK**: **Gradio** or **Blank Python**.
-6. **Space Hardware**: **CPU Basic • 2 vCPU • 16 GB RAM** (Free).
+5. **Select the Space SDK**: **Gradio**.
+6. **Space Hardware**: **CPU Basic • 2 vCPU • 16 GB RAM** (Free) or **ZeroGPU**.
 7. Visibility: **Public** or **Private**.
 8. Click **Create Space**.
 
 #### Step 2: Push Repository Code & Entrypoint
-Upload your `backend/` files to your Space. Ensure you include an `app.py` entrypoint file in the root of your Space:
-```python
-# app.py (Entry point for Hugging Face Spaces)
-import os
-import uvicorn
-from app.main import app as fastapi_app
+Upload the files inside `backend/` to the root of your Hugging Face Space repository:
 
-# Module-level ASGI export for Hugging Face runner
-app = fastapi_app
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
-```
-
-Push your code via Git:
 ```bash
 git clone https://huggingface.co/spaces/YOUR_USERNAME/documentrag-backend
 cd documentrag-backend
-# Copy all files from DocumentRAG/backend/ into this folder
+
+# Copy all files from your local DocumentRAG/backend/ into this directory
+# Ensure app.py, gradio_app.py, requirements.txt, and app/ are in the root of the Space
+
 git add .
-git commit -m "Deploy DocumentRAG Backend"
+git commit -m "Deploy DocumentRAG ZeroGPU Gradio Backend"
 git push origin main
 ```
 
 #### Step 3: Configure Environment Secrets (Hide API Keys)
 1. In your Space, navigate to **Settings** -> **Variables and Secrets** -> **New Secret**.
-2. Add secrets safely without exposing them in your code:
-   - `GOOGLE_API_KEY`: `your_gemini_key`
-   - `GROQ_API_KEY`: `your_groq_key`
+2. Add your provider API keys safely:
+   - `GOOGLE_API_KEY`: `your_gemini_api_key`
+   - `GROQ_API_KEY`: `your_groq_api_key`
    - `CORS_ORIGINS`: `*`
-3. Hugging Face Spaces will automatically launch your FastAPI app on port `7860` and give you a public API endpoint:
-   `https://YOUR_USERNAME-documentrag-backend.hf.space`
+3. Hugging Face Spaces will automatically build the environment, launch your backend on port `7860`, and expose both the interactive Gradio UI and FastAPI REST endpoints.
 
 ---
 
-### Option 2: Vercel (Frontend) + Render (Backend)
+### Option 2: Vercel (Frontend) + Hugging Face (Backend)
 
-Decouple the frontend Single Page Application (CDN) from the Python ASGI backend service. **Zero credit card required**.
+Decouple the frontend Single Page Application (hosted on Vercel's global Edge CDN) from the Python AI backend service running on Hugging Face Spaces. **100% free with zero credit card required**.
 
-#### Step 1: Deploy Backend to Render
-
-##### Method A: Docker Container Deployment (Recommended)
-1. Log in to [Render](https://render.com/).
-2. Click **New +** -> **Web Service** and connect your repository.
-3. Set **Language / Runtime**: **Docker**.
-4. Set **Root Directory**: `backend` (Render uses `backend/Dockerfile` automatically).
-5. Add Environment Variables:
-   - `GOOGLE_API_KEY` = `your_gemini_key`
-   - `GROQ_API_KEY` = `your_groq_key`
-   - `CORS_ORIGINS` = `*` (or `https://your-app.vercel.app`)
-   - `WEB_CONCURRENCY` = `1`
-6. Click **Create Web Service**. Render builds the container and binds port `$PORT` automatically.
-
-##### Method B: Native Python 3 Environment
-1. Set **Language / Runtime**: **Python 3**.
-2. Set **Root Directory**: `backend`.
-3. Set **Build Command**: `pip install --upgrade pip && pip install -r requirements.txt`.
-4. Set **Start Command**: `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
-5. Add Environment Variables (`GOOGLE_API_KEY`, `GROQ_API_KEY`, `CORS_ORIGINS=*`, `PYTHONUNBUFFERED=1`, `WEB_CONCURRENCY=1`, `MALLOC_TRIM_THRESHOLD_=100000`).
+#### Step 1: Obtain Hugging Face Backend Direct URL
+Deploy your backend to Hugging Face Spaces (Option 1 above). Note your Space's direct backend URL:
+`https://YOUR_USERNAME-documentrag-backend.hf.space`
 
 #### Step 2: Deploy Frontend to Vercel
 1. Log in to [Vercel](https://vercel.com/).
-2. Click **Add New...** -> **Project** and import your repository.
+2. Click **Add New...** -> **Project** and import your repository (`DocumentRAG`).
 3. Set **Root Directory**: `frontend`.
 4. **Framework Preset**: Vite.
-5. Environment Variables:
-   - `VITE_API_BASE_URL` = `https://documentrag-backend.onrender.com` (or your HF Space URL)
-6. Click **Deploy**.
+5. Add Environment Variables:
+   - `VITE_API_BASE_URL` = `https://YOUR_USERNAME-documentrag-backend.hf.space`
+6. Click **Deploy**. Vercel will build and distribute the React SPA globally.
 
 ---
 
-### Option 3: PythonAnywhere (Backend Web Service)
+### Option 3: Render (Backend) - Free Tier Limitation Note
 
-Dedicated Python hosting platform offering a **100% free tier** with **zero credit card required**.
+You can also deploy the backend service to [Render](https://render.com/) as a Docker Web Service or Python Web Service.
 
-1. Sign up for a free account at [PythonAnywhere](https://www.pythonanywhere.com/).
-2. Open a **Bash Console** in your dashboard.
-3. Clone repository and install dependencies:
-   ```bash
-   git clone https://github.com/AishikTokdar/DocumentRAG.git
-   cd DocumentRAG/backend
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
-4. In **Web** tab -> **Add a new web app**:
-   - Select **Manual configuration** -> **Python 3.11**.
-   - Set **WSGI Configuration file** to import `app.main:app` via ASGI/WSGI bridge or Uvicorn runner.
-   - Set Environment Variables under **Virtualenv** / `.env`.
-5. Click **Reload your_username.pythonanywhere.com**.
+> [!WARNING]
+> **Render Free Tier RAM Limitation Note**:
+> Render's free web service tier limits memory allocation to **512 MB RAM**. Loading PyTorch CPU runtime, Hugging Face `sentence-transformers/all-MiniLM-L6-v2` embedding weights, and FAISS dense vector search during cold startup can consume **450 MB – 600 MB** of RAM. This frequently triggers Out-of-Memory (OOM) `SIGKILL` termination on Render's free tier.
+> 
+> **Recommendation**: For free cloud deployment, use **Hugging Face Spaces** (Option 1 & 2), which provides **16 GB RAM** on its free tier.
+
+#### Deploying on Render (If using paid/higher tier):
+1. Log in to [Render](https://render.com/) and click **New +** -> **Web Service**.
+2. Connect repository and set **Root Directory**: `backend`.
+3. Set **Runtime**: **Docker** (uses `backend/Dockerfile`) or **Python 3**.
+4. Set **Start Command** (for Python runtime): `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+5. Add Environment Variables: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `CORS_ORIGINS=*`, `WEB_CONCURRENCY=1`.
 
 ---
 
-### Option 4: Docker & Docker Compose (Local / Self-Hosted / Coolify)
+### Option 4: Docker & Docker Compose Deployment
 
-For single-command local testing or deployment on self-hosted VPS servers (Coolify, Hetzner, AWS EC2, DigitalOcean). **Zero cost forever**.
+For self-hosted VPS servers (Coolify, Hetzner, AWS EC2, DigitalOcean) or local containerized testing.
 
-1. Create `backend/.env`:
+#### Method A: Standalone Backend Docker Container
+```bash
+cd backend
+
+# Build Docker image
+docker build -t documentrag-backend .
+
+# Run container with environment file
+docker run -d \
+  -p 8000:8000 \
+  --env-file .env \
+  --name documentrag-backend \
+  documentrag-backend
+```
+
+#### Method B: Docker Compose (Full Stack: Frontend + Backend)
+1. Create `backend/.env` from template:
    ```bash
-   cd backend
-   cp .env.example .env
-   # Add your AI API key(s)
+   cp backend/.env.example backend/.env
+   # Edit backend/.env and add GOOGLE_API_KEY or GROQ_API_KEY
    ```
-2. Launch containers:
+2. Launch full-stack container services:
    ```bash
    docker compose up --build
    ```
-3. Access points:
-   - **Frontend**: `http://localhost:5173`
-   - **Backend**: `http://localhost:8000`
-   - **OpenAPI Docs**: `http://localhost:8000/docs`
+3. Active Endpoints:
+   - **React Frontend SPA**: `http://localhost:5173`
+   - **FastAPI Backend API**: `http://localhost:8000`
+   - **Swagger UI Sandbox**: `http://localhost:8000/docs`
 
 ---
 
-## Local Bash Deployment Guide
+## Local CLI / Bash Deployment Guide
+
+Run DocumentRAG natively on your local machine using standard terminal commands.
 
 ### Prerequisites
 - Python 3.11 or 3.12
@@ -308,21 +298,31 @@ git clone https://github.com/AishikTokdar/DocumentRAG.git
 cd DocumentRAG
 ```
 
-### 2. Backend Setup
+### 2. Backend Local CLI Setup
 ```bash
 cd backend
+
+# Create and activate Python virtual environment
 python3 -m venv .venv
-source .venv/bin/activate  # On Windows: source .venv/Scripts/activate
+source .venv/bin/activate  # On Windows PowerShell: .venv\Scripts\activate
+
+# Install dependencies
 pip install --upgrade pip
 pip install -r requirements.txt
+
+# Configure environment file
 cp .env.example .env
-# Add GOOGLE_API_KEY or GROQ_API_KEY in backend/.env
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+# Edit backend/.env and add your API key (e.g. GOOGLE_API_KEY or GROQ_API_KEY)
+
+# Launch backend server
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 3. Frontend Setup (New Terminal)
+### 3. Frontend Local CLI Setup (New Terminal)
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
 cp .env.example .env
 npm run dev

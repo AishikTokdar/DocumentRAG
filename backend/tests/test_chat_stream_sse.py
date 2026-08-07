@@ -44,7 +44,11 @@ class _FakePipeline:
 
 class _FakeLLMService:
     async def stream_answer_with_failover(
-        self, question: str, context_docs: list[Any], model: str | None = None
+        self,
+        question: str,
+        context_docs: list[Any],
+        model: str | None = None,
+        hybrid_mode: bool = True,
     ) -> AsyncGenerator[dict[str, str], None]:
         yield {"type": "token", "content": "Hello", "model_used": "openai/gpt-4o-mini"}
         yield {"type": "token", "content": " world", "model_used": "openai/gpt-4o-mini"}
@@ -73,6 +77,7 @@ class TestChatStreamSSE(unittest.TestCase):
                     question="test?",
                     model=None,
                     include_sources=True,
+                    hybrid_mode=True,
                     vector_service=vector_service,
                     llm_service=llm_service,
                 ):

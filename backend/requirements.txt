@@ -27,6 +27,11 @@ pypdf>=4.2.0
 # Environment
 python-dotenv>=1.0.1
 
+# Gradio (for Hugging Face Spaces Backend - pinned < 6.0 to use pure Python server)
+gradio>=5.0.0,<6.0.0
+# ZeroGPU decorator/runtime integration
+spaces>=0.50.0
+
 # HTTP Client
 httpx>=0.27.0
 aiohttp>=3.9.5

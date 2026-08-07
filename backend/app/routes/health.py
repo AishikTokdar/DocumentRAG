@@ -3,7 +3,7 @@ Health Check Routes
 """
 
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
 from ..config import get_settings
 from ..models import ModelInfo, ModelsResponse, StatusResponse
@@ -12,7 +12,7 @@ from ..services.llm_service import LLMService
 router = APIRouter(tags=["Health & Operations"])
 
 
-@router.api_route("/", methods=["GET", "HEAD"], response_model=StatusResponse)
+@router.get("/", response_model=StatusResponse)
 async def root():
     """
     Root endpoint - basic health check.
@@ -22,11 +22,16 @@ async def root():
     """
     return StatusResponse(
         status="running",
-        message="DocumentRAG API is ready"
+        message="DocumentRAG API is ready. See /docs and /redoc for the full backend reference."
     )
 
 
-@router.api_route("/health", methods=["GET", "HEAD"], response_model=StatusResponse)
+@router.head("/", include_in_schema=False)
+async def root_head():
+    return Response(status_code=200)
+
+
+@router.get("/health", response_model=StatusResponse)
 async def health_check():
     """
     Health check endpoint.
@@ -39,10 +44,15 @@ async def health_check():
     settings = get_settings()
     return StatusResponse(
         status="healthy",
-        message="All systems operational",
+        message="All systems operational. The backend API is ready.",
         model=settings.default_model,
         server_boot_id=SERVER_BOOT_ID,
     )
+
+
+@router.head("/health", include_in_schema=False)
+async def health_head():
+    return Response(status_code=200)
 
 
 @router.get("/models", response_model=ModelsResponse)

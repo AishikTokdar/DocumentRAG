@@ -1,5 +1,5 @@
 """
-FastAPI Application Entry Point & Interactive OpenAPI Documentation
+FastAPI backend entry point for DocumentRAG.
 """
 
 import os
@@ -87,9 +87,9 @@ tags_metadata = [
 ]
 
 API_DESCRIPTION = dedent("""
-Welcome to the **DocumentRAG Interactive OpenAPI Specification**.
+DocumentRAG backend API for PDF ingestion, retrieval-augmented generation, and operational metrics.
 
-DocumentRAG is a state-of-the-art Retrieval-Augmented Generation (RAG) platform supporting multi-document PDF indexing, local zero-key CPU embeddings (`sentence-transformers/all-MiniLM-L6-v2`), FAISS vector search, a 7-stage agent pipeline, and multi-provider AI model failover.
+This service supports multi-document PDF indexing, local zero-key CPU embeddings (`sentence-transformers/all-MiniLM-L6-v2`), FAISS vector search, a 7-stage agent pipeline, and multi-provider AI model failover.
 
 ### Key Interactive Documentation Endpoints:
 * **Swagger UI Sandbox**: `/docs` - Interactive API testing & specification sandbox.
@@ -109,7 +109,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="DocumentRAG API Engine",
+        title="DocumentRAG Backend API",
         description=API_DESCRIPTION,
         version="1.0.0",
         openapi_tags=tags_metadata,
