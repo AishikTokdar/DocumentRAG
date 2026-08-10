@@ -18,13 +18,23 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-from langchain_community.embeddings import HuggingFaceEmbeddings
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+except ImportError:
+    from langchain_community.embeddings import HuggingFaceEmbeddings
+
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_openai import OpenAIEmbeddings
 
-from ..config import AIProvider, get_embedding_fallback_chain, get_settings
+from ..config import (
+    AIProvider,
+    get_embedding_fallback_chain,
+    get_provider,
+    get_settings,
+    parse_api_keys,
+)
 from .embedding_clients import GeminiEmbeddings, GroqEmbeddings
 
 logger = logging.getLogger(__name__)
@@ -76,47 +86,52 @@ class VectorStoreService:
             session_id.strip(),
         )
 
-    def _resolve_api_key(self, provider: AIProvider) -> str | None:
+    def _resolve_api_keys(self, provider: AIProvider) -> list[str]:
+        keys = provider.api_keys
+        if keys:
+            return keys
         if provider.name == "openrouter":
-            return provider.api_key or self.settings.openrouter_api_key
+            return parse_api_keys(self.settings.openrouter_api_key)
         if provider.name == "openai":
-            return provider.api_key or self.settings.openai_direct_api_key
+            return parse_api_keys(self.settings.openai_direct_api_key)
         if provider.name == "groq":
-            return provider.api_key or self.settings.groq_api_key
+            return parse_api_keys(self.settings.groq_api_key)
         if provider.name == "gemini":
-            return provider.api_key or self.settings.google_api_key
+            return parse_api_keys(self.settings.google_api_key)
         if provider.name == "huggingface":
-            return provider.api_key or self.settings.hf_api_key
-        return provider.api_key
+            return parse_api_keys(self.settings.hf_api_key)
+        return []
 
     def _make_local_cpu_embeddings(self, model: str) -> Embeddings:
         """Runs MiniLM (etc.) on CPU via sentence-transformers with low memory batching."""
         mk: dict[str, Any] = {"device": "cpu"}
         ek: dict[str, Any] = {"batch_size": 16, "normalize_embeddings": True}
+        hf_provider = get_provider("huggingface")
+        if hf_provider:
+            keys = self._resolve_api_keys(hf_provider)
+            if keys:
+                mk["token"] = keys[0]
         return HuggingFaceEmbeddings(model_name=model, model_kwargs=mk, encode_kwargs=ek)
 
     def _make_embeddings(self, provider: AIProvider, model: str) -> Embeddings:
+        keys = self._resolve_api_keys(provider)
         if provider.name == "huggingface":
-            key = self._resolve_api_key(provider)
             mk: dict[str, Any] = {"device": "cpu"}
-            if key:
-                mk["token"] = key
+            if keys:
+                mk["token"] = keys[0]
             return HuggingFaceEmbeddings(model_name=model, model_kwargs=mk)
         if provider.name == "groq":
-            key = self._resolve_api_key(provider)
-            if not key:
+            if not keys:
                 raise ValueError("GROQ_API_KEY missing")
             return GroqEmbeddings(
-                api_key=key,
+                api_key=keys,
                 model=model,
                 base_url=provider.base_url.rstrip("/"),
             )
         if provider.name == "gemini":
-            key = self._resolve_api_key(provider)
-            if not key:
+            if not keys:
                 raise ValueError("GOOGLE_API_KEY missing")
-            return GeminiEmbeddings(api_key=key, model=model)
-        key = self._resolve_api_key(provider)
+            return GeminiEmbeddings(api_key=keys, model=model)
         base_url = (
             self.settings.openrouter_api_base
             if provider.name == "openrouter"
@@ -125,7 +140,7 @@ class VectorStoreService:
         return OpenAIEmbeddings(  # type: ignore[call-arg]
             base_url=base_url,
             model=model,
-            api_key=cast(Any, key),
+            api_key=cast(Any, keys[0] if keys else None),
         )
 
     def _embedding_candidates(self) -> list[tuple[AIProvider, str]]:

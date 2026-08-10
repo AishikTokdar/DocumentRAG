@@ -151,35 +151,35 @@ export interface AIModel {
  */
 export const AI_MODELS: AIModel[] = [
   {
+    id: "gemini-3.5-flash",
+    name: "Gemini 3.5 Flash",
+    provider: "gemini",
+    description: "Free tier via Google AI Studio — ultra fast, smart & accurate",
+    isDefault: true,
+  },
+  {
+    id: "gemini-3.5-flash-lite",
+    name: "Gemini 3.5 Flash-Lite",
+    provider: "gemini",
+    description: "Free tier lightweight Gemini 3.5 model",
+  },
+  {
+    id: "gemini-3.1-flash-lite",
+    name: "Gemini 3.1 Flash-Lite",
+    provider: "gemini",
+    description: "Free tier fast 3.1 model",
+  },
+  {
     id: "gemini-2.5-flash",
     name: "Gemini 2.5 Flash",
     provider: "gemini",
-    description: "Free tier via Google AI Studio — ultra fast & accurate",
-    isDefault: true,
+    description: "Free tier Gemini 2.5 Flash model",
   },
   {
     id: "gemini-2.5-flash-lite",
     name: "Gemini 2.5 Flash-Lite",
     provider: "gemini",
-    description: "Free tier lightweight Gemini model",
-  },
-  {
-    id: "gemini-2.5-pro",
-    name: "Gemini 2.5 Pro",
-    provider: "gemini",
-    description: "Free tier high reasoning model",
-  },
-  {
-    id: "gemini-2.0-flash",
-    name: "Gemini 2.0 Flash",
-    provider: "gemini",
-    description: "Free tier stable 2.0 release",
-  },
-  {
-    id: "gemini-1.5-flash",
-    name: "Gemini 1.5 Flash",
-    provider: "gemini",
-    description: "Free tier fast 1.5 model",
+    description: "Free tier lightweight 2.5 model",
   },
   {
     id: "llama-3.3-70b-versatile",

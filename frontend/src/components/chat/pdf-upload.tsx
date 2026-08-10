@@ -167,15 +167,15 @@ export function PDFUpload({
             className="space-y-2"
           >
             {/* Prominent Big Ready Card */}
-            <GlassCard variant="default" padding="default" className="border-emerald-500/50 bg-emerald-500/15 dark:bg-emerald-950/40 shadow-sm overflow-hidden">
+            <GlassCard variant="default" padding="default" className="border-lime-500/50 bg-lime-500/15 dark:bg-lime-950/40 shadow-sm overflow-hidden">
               <div className="flex flex-col space-y-3.5">
                 {/* Header Row: Status Check & Action Buttons */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="p-2 rounded-xl bg-emerald-500/25 text-emerald-600 dark:text-emerald-300 shrink-0">
+                    <div className="p-2 rounded-xl bg-lime-500/25 text-lime-600 dark:text-lime-300 shrink-0">
                       <CheckCircle className="w-5 h-5" />
                     </div>
-                    <span className="text-sm sm:text-base font-extrabold tracking-tight text-emerald-700 dark:text-emerald-300 leading-snug">
+                    <span className="text-sm sm:text-base font-extrabold tracking-tight text-lime-700 dark:text-lime-300 leading-snug">
                       The RAG pipeline is ready to answer
                     </span>
                   </div>
@@ -184,7 +184,7 @@ export function PDFUpload({
                     <button
                       type="button"
                       onClick={() => setShowDetails((prev) => !prev)}
-                      className="px-2 py-1 rounded-lg text-zinc-700 dark:text-zinc-200 hover:bg-emerald-500/20 dark:hover:bg-emerald-900/40 transition-colors text-xs flex items-center gap-1 font-semibold cursor-pointer border border-emerald-500/30"
+                      className="px-2 py-1 rounded-lg text-stone-700 dark:text-stone-200 hover:bg-lime-500/20 dark:hover:bg-lime-900/40 transition-colors text-xs flex items-center gap-1 font-semibold cursor-pointer border border-lime-500/30"
                       title={showDetails ? "Hide pipeline steps" : "View pipeline steps"}
                     >
                       <span>{showDetails ? "Hide Steps" : "Steps"}</span>
@@ -196,7 +196,7 @@ export function PDFUpload({
                         variant="ghost"
                         size="icon"
                         onClick={onReset}
-                        className="h-7 w-7 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+                        className="h-7 w-7 text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 cursor-pointer"
                         title="Remove documents & upload new"
                       >
                         <X className="w-4 h-4" />
@@ -207,14 +207,14 @@ export function PDFUpload({
 
                 {/* Stat Badges Row: Clear, spacious horizontal pills */}
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-xs font-bold border border-emerald-300/40 dark:border-emerald-700/60 shadow-xs">
-                    <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-lime-100 dark:bg-lime-900/60 text-lime-800 dark:text-lime-200 text-xs font-bold border border-lime-300/40 dark:border-lime-700/60 shadow-xs">
+                    <Layers className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 shrink-0" />
                     <span>{activeDocCount} PDF{activeDocCount > 1 ? "s" : ""} Loaded</span>
                   </div>
 
                   {chunksCreated !== undefined && (
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-100 dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-200 text-xs font-bold border border-zinc-200 dark:border-zinc-700 shadow-xs">
-                      <span className="font-mono text-emerald-600 dark:text-emerald-400">{chunksCreated}</span>
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-stone-100 dark:bg-stone-800/80 text-stone-800 dark:text-stone-200 text-xs font-bold border border-stone-200 dark:border-stone-700 shadow-xs">
+                      <span className="font-mono text-lime-600 dark:text-lime-400">{chunksCreated}</span>
                       <span>chunks indexed</span>
                     </div>
                   )}
@@ -222,15 +222,15 @@ export function PDFUpload({
 
                 {/* Active Files List */}
                 {files.length > 0 && (
-                  <div className="pt-2 border-t border-emerald-500/20 space-y-1">
+                  <div className="pt-2 border-t border-lime-500/20 space-y-1">
                     {files.map((doc, idx) => (
-                      <div key={idx} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/70 dark:bg-zinc-900/70 text-xs">
+                      <div key={idx} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white/70 dark:bg-stone-900/70 text-xs">
                         <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span className="font-medium text-zinc-900 dark:text-zinc-100 truncate">{doc.file_name}</span>
+                          <FileText className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 shrink-0" />
+                          <span className="font-medium text-stone-900 dark:text-stone-100 truncate">{doc.file_name}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] text-zinc-500 shrink-0">
-                          <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-mono font-semibold">
+                        <div className="flex items-center gap-2 text-[11px] text-stone-500 shrink-0">
+                          <span className="px-2 py-0.5 rounded bg-lime-100 dark:bg-lime-900/50 text-lime-700 dark:text-lime-300 font-mono font-semibold">
                             {doc.page_count} pgs
                           </span>
                           <span>{doc.chunks_created} chunks</span>
@@ -246,17 +246,17 @@ export function PDFUpload({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="pt-2 border-t border-emerald-500/20"
+                    className="pt-2 border-t border-lime-500/20"
                   >
-                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-950/90 p-3 font-mono text-[11px]">
+                    <div className="rounded-xl border border-stone-200 dark:border-stone-800 bg-white/90 dark:bg-stone-950/90 p-3 font-mono text-[11px]">
                       <ul className="space-y-1.5">
                         {PIPELINE_STEPS.map((s) => (
-                          <li key={s.id} className="flex items-center justify-between text-zinc-700 dark:text-zinc-300">
+                          <li key={s.id} className="flex items-center justify-between text-stone-700 dark:text-stone-300">
                             <span className="flex items-center gap-1.5">
-                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              <Check className="w-3.5 h-3.5 text-lime-500" />
                               <span className="font-semibold">{s.label}</span>
                             </span>
-                            <span className="text-[10px] text-zinc-400">{s.detail}</span>
+                            <span className="text-[10px] text-stone-400">{s.detail}</span>
                           </li>
                         ))}
                       </ul>
@@ -278,7 +278,8 @@ export function PDFUpload({
               padding="default"
               className={cn(
                 "transition-colors duration-200",
-                isDragOver && "border-zinc-500 bg-zinc-100/50 dark:bg-zinc-800/50",
+                isDragOver && "border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 shadow-amber-500/20 shadow-[0_0_15px]",
+                !isDragOver && "border-stone-300 dark:border-stone-800",
                 displayError && "border-red-500/50",
               )}
             >
@@ -288,15 +289,15 @@ export function PDFUpload({
                     <div className="flex items-center gap-3">
                       <Spinner size="default" />
                       <div>
-                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                        <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
                           Processing Documents...
                         </p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        <p className="text-xs text-stone-500 dark:text-stone-400">
                           Validating files &amp; building FAISS vector index
                         </p>
                       </div>
                     </div>
-                    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-3 font-mono text-[11px] leading-relaxed">
+                    <div className="rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950 p-3 font-mono text-[11px] leading-relaxed">
                       <ul className="space-y-1.5">
                         {PIPELINE_STEPS.map((s, i) => {
                           const done = i < completedSteps;
@@ -306,23 +307,23 @@ export function PDFUpload({
                               key={s.id}
                               className={cn(
                                 "flex items-center gap-2 rounded px-2 py-1 transition-colors",
-                                active && "bg-zinc-200/50 dark:bg-zinc-800/50",
+                                active && "bg-amber-100/50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 font-semibold",
                               )}
                             >
                               <span className="shrink-0">
                                 {done ? (
-                                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                  <Check className="h-3.5 w-3.5 text-lime-500" />
                                 ) : active ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-900 dark:text-zinc-100" />
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-600 dark:text-amber-400" />
                                 ) : (
-                                  <span className="h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 block ml-1" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-stone-300 dark:bg-stone-700 block ml-1" />
                                 )}
                               </span>
                               <div className="min-w-0 flex-1 flex items-center justify-between">
-                                <span className={cn(done ? "text-zinc-900 dark:text-zinc-100 font-medium" : "text-zinc-500 dark:text-zinc-400")}>
+                                <span className={cn(done ? "text-stone-900 dark:text-stone-100 font-medium" : active ? "" : "text-stone-500 dark:text-stone-400")}>
                                   {s.label}
                                 </span>
-                                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 hidden sm:inline">
+                                <span className="text-[10px] text-stone-400 dark:text-stone-500 hidden sm:inline">
                                   {s.detail}
                                 </span>
                               </div>
@@ -348,20 +349,20 @@ export function PDFUpload({
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
                       className={cn(
-                        "flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 dark:border-zinc-800 p-5 text-center transition-colors hover:border-zinc-400 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-900/50",
-                        isDragOver && "border-zinc-900 dark:border-zinc-100 bg-zinc-100 dark:bg-zinc-800/80",
+                        "flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 dark:border-stone-700 p-5 text-center transition-colors hover:border-amber-400 dark:hover:border-amber-600 hover:bg-amber-50/50 dark:hover:bg-amber-950/20",
+                        isDragOver && "border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-amber-950/40",
                       )}
                     >
-                      <div className="mb-2 rounded-full bg-zinc-100 dark:bg-zinc-800 p-2.5 text-zinc-700 dark:text-zinc-300">
-                        {isDragOver ? <File className="h-5 w-5" /> : <Upload className="h-5 w-5" />}
+                      <div className="mb-2 rounded-full bg-stone-100 dark:bg-stone-800 p-2.5 text-stone-700 dark:text-stone-300 transition-colors group-hover:text-amber-600 dark:group-hover:text-amber-500">
+                        {isDragOver ? <File className="h-5 w-5 text-amber-600 dark:text-amber-500" /> : <Upload className="h-5 w-5" />}
                       </div>
-                      <h3 className="mb-1 text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                      <h3 className="mb-1 text-xs font-semibold text-stone-900 dark:text-stone-100">
                         {isDragOver ? "Drop PDF file(s) here" : "Upload Document(s) (PDF)"}
                       </h3>
-                      <p className="mb-2 text-[11px] text-zinc-500 dark:text-zinc-400 max-w-xs">
-                        Up to <strong className="text-zinc-900 dark:text-zinc-200">3 PDFs</strong> (max combined size 50 MB)
+                      <p className="mb-2 text-[11px] text-stone-500 dark:text-stone-400 max-w-xs">
+                        Up to <strong className="text-stone-900 dark:text-stone-200">3 PDFs</strong> (max combined size 50 MB)
                       </p>
-                      <Button type="button" variant="outline" size="sm" className="h-7 text-xs">
+                      <Button type="button" variant="outline" size="sm" className="h-7 text-xs border-stone-300 dark:border-stone-700 hover:bg-amber-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300">
                         <FileText className="mr-1.5 h-3.5 w-3.5" />
                         Select File(s)
                       </Button>

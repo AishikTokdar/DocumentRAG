@@ -16,7 +16,7 @@ interface UseHealthReturn {
   status: HealthStatus;
 }
 
-const POLL_INTERVAL_MS = 15_000;
+const POLL_INTERVAL_MS = 60_000;
 
 export function useHealth(): UseHealthReturn {
   const [status, setStatus] = React.useState<HealthStatus>("checking");

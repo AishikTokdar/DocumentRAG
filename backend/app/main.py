@@ -136,6 +136,12 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)
     app.include_router(tunnel_router)
 
+    # Serve static frontend if it exists (for single-container Docker deployments)
+    static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+    if os.path.exists(static_dir):
+        from fastapi.staticfiles import StaticFiles
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+
     return app
 
 

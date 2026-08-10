@@ -36,18 +36,29 @@ def runtime_summary() -> RuntimeSummaryResponse:
     for name, prov in AI_PROVIDERS.items():
         llm = provider_has_credentials(prov)
         emb = name in emb_names
-        # "working" means both chat + embeddings are available for that provider family.
-        if llm and emb:
+        from ..services.model_health import is_model_healthy
+        healthy_models = sum(1 for m in prov.models if is_model_healthy(m))
+        total_models = len(prov.models)
+        
+        actual_llm_ready = llm and healthy_models > 0
+        
+        if llm:
+            if healthy_models == total_models:
+                st = "working"
+            elif healthy_models > 0:
+                st = "partial"
+            else:
+                st = "unavailable"
+        elif emb:
             st = "working"
-        elif llm or emb:
-            st = "partial"
         else:
             st = "unavailable"
+            
         rows.append(
             RuntimeProviderRow(
                 id=name,
                 display_name=_PROVIDER_LABELS.get(name, name.replace("_", " ").title()),
-                llm_ready=llm,
+                llm_ready=actual_llm_ready,
                 embedding_ready=emb,
                 status=st,
             )

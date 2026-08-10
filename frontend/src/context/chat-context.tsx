@@ -67,7 +67,7 @@ const initialState: ChatContextState = {
   isLoading: false,
   uploadError: null,
   chatError: null,
-  selectedModel: "openai/gpt-4o-mini",
+  selectedModel: "gemini-3.5-flash",
   includeSources: false,
   streamingEnabled: true,
   streamingAnswer: null,

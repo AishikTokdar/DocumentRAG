@@ -15,60 +15,83 @@ def _norm_texts(texts: list[str]) -> list[str]:
 
 
 class GroqEmbeddings(Embeddings):
-    """Groq OpenAI /v1/embeddings with explicit JSON input: list[str]."""
+    """Groq OpenAI /v1/embeddings with explicit JSON input: list[str] and multi-key support."""
 
-    def __init__(self, api_key: str, model: str, base_url: str = "https://api.groq.com/openai/v1") -> None:
-        self._key = api_key
+    def __init__(self, api_key: str | list[str], model: str, base_url: str = "https://api.groq.com/openai/v1") -> None:
+        self._keys = [api_key] if isinstance(api_key, str) else (api_key or [])
         self._model = model
         self._base = base_url.rstrip("/")
 
+    def _post_with_key_fallback(self, client: httpx.Client, endpoint: str, json_body: dict) -> httpx.Response:
+        last_exc: Exception | None = None
+        for key in self._keys:
+            headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+            try:
+                r = client.post(f"{self._base}/{endpoint}", headers=headers, json=json_body)
+                r.raise_for_status()
+                return r
+            except Exception as exc:
+                last_exc = exc
+        if last_exc:
+            raise last_exc
+        raise RuntimeError("No Groq API keys available")
+
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         normed = _norm_texts(texts)
-        headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"}
         out: list[list[float]] = []
         with httpx.Client(timeout=120.0) as client:
             for i in range(0, len(normed), _BATCH):
                 batch = normed[i : i + _BATCH]
-                r = client.post(
-                    f"{self._base}/embeddings",
-                    headers=headers,
-                    json={"model": self._model, "input": batch},
+                r = self._post_with_key_fallback(
+                    client,
+                    "embeddings",
+                    {"model": self._model, "input": batch},
                 )
-                r.raise_for_status()
                 data = r.json()
                 rows = sorted(data.get("data", []), key=lambda x: x.get("index", 0))
                 out.extend(row["embedding"] for row in rows)
         return out
 
     def embed_query(self, text: str) -> list[float]:
-        headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"}
         t = _norm_texts([text])[0]
         with httpx.Client(timeout=60.0) as client:
-            r = client.post(
-                f"{self._base}/embeddings",
-                headers=headers,
-                json={"model": self._model, "input": t},
+            r = self._post_with_key_fallback(
+                client,
+                "embeddings",
+                {"model": self._model, "input": t},
             )
-            r.raise_for_status()
             data = r.json()
         rows = sorted(data.get("data", []), key=lambda x: x.get("index", 0))
         return rows[0]["embedding"]
 
 
 class GeminiEmbeddings(Embeddings):
-    """Gemini REST embedContent / batchEmbedContents (not OpenAI-compat)."""
+    """Gemini REST embedContent / batchEmbedContents with multi-key support."""
 
-    def __init__(self, api_key: str, model: str) -> None:
-        self._key = api_key
+    def __init__(self, api_key: str | list[str], model: str) -> None:
+        self._keys = [api_key] if isinstance(api_key, str) else (api_key or [])
         self._resource = model if model.startswith("models/") else f"models/{model}"
 
     def _embedding_v2(self) -> bool:
         return "embedding-2" in self._resource.lower()
 
+    def _post_with_key_fallback(self, client: httpx.Client, url: str, json_body: dict) -> httpx.Response:
+        last_exc: Exception | None = None
+        for key in self._keys:
+            headers = {"x-goog-api-key": key, "Content-Type": "application/json"}
+            try:
+                r = client.post(url, headers=headers, json=json_body)
+                r.raise_for_status()
+                return r
+            except Exception as exc:
+                last_exc = exc
+        if last_exc:
+            raise last_exc
+        raise RuntimeError("No Google API keys available")
+
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         normed = _norm_texts(texts)
         url = f"https://generativelanguage.googleapis.com/v1beta/{self._resource}:batchEmbedContents"
-        headers = {"x-goog-api-key": self._key, "Content-Type": "application/json"}
         out: list[list[float]] = []
         with httpx.Client(timeout=120.0) as client:
             for i in range(0, len(normed), _BATCH):
@@ -93,8 +116,7 @@ class GeminiEmbeddings(Embeddings):
                         for t in batch
                     ]
                 body = {"requests": reqs}
-                r = client.post(url, headers=headers, json=body)
-                r.raise_for_status()
+                r = self._post_with_key_fallback(client, url, body)
                 data = r.json()
                 chunk_out: list[list[float]] = []
                 for emb in data.get("embeddings", []):
@@ -108,7 +130,6 @@ class GeminiEmbeddings(Embeddings):
 
     def embed_query(self, text: str) -> list[float]:
         url = f"https://generativelanguage.googleapis.com/v1beta/{self._resource}:embedContent"
-        headers = {"x-goog-api-key": self._key, "Content-Type": "application/json"}
         t = _norm_texts([text])[0]
         if self._embedding_v2():
             body = {
@@ -124,8 +145,7 @@ class GeminiEmbeddings(Embeddings):
                 "taskType": "RETRIEVAL_QUERY",
             }
         with httpx.Client(timeout=60.0) as client:
-            r = client.post(url, headers=headers, json=body)
-            r.raise_for_status()
+            r = self._post_with_key_fallback(client, url, body)
             data = r.json()
         emb = data.get("embedding") or {}
         vals = emb.get("values")

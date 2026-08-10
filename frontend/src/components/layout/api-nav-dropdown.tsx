@@ -11,7 +11,7 @@ import {
 
 export function ApiNavDropdown({ className }: { className?: string }) {
   const location = useLocation();
-  const docsUrl = joinApiUrl("/docs");
+  const docsUrl = joinApiUrl("/redoc");
   const onApiStatus = location.pathname === "/api-status";
 
   return (

@@ -83,7 +83,6 @@ export const SUPPORTED_FILE_TYPES = {
 export const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/chat", label: "Chat" },
-  { href: "/about", label: "About" },
 ] as const;
 
 /**

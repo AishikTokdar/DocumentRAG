@@ -43,7 +43,7 @@ export function ApiStatusPage() {
     void load(false);
   }, [load]);
 
-  const docsUrl = joinApiUrl("/docs");
+  const docsUrl = joinApiUrl("/redoc");
 
   return (
     <PageWrapper>
@@ -142,25 +142,25 @@ export function ApiStatusPage() {
         </div>
 
         {/* Detailed Provider Status */}
-        {data?.providers && (
+        {data?.providers_detail && data.providers_detail.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
               Configured Providers
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {Object.entries(data.providers).map(([pName, pStatus]) => (
-                <GlassCard key={pName} padding="default">
+              {data.providers_detail.map((provider) => (
+                <GlassCard key={provider.id} padding="default">
                   <GlassCardContent className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 capitalize">
-                        {pName}
+                        {provider.display_name}
                       </h3>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        Status: {String(pStatus)}
+                        Status: {provider.status}
                       </p>
                     </div>
-                    <Badge variant={pStatus === "working" ? "success" : "secondary"}>
-                      {String(pStatus)}
+                    <Badge variant={provider.status === "working" ? "success" : provider.status === "partial" ? "warning" : "secondary"}>
+                      {provider.status}
                     </Badge>
                   </GlassCardContent>
                 </GlassCard>

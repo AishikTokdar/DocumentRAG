@@ -49,7 +49,7 @@ export function PageWrapper({
   return (
     <div
       className={cn(
-        "min-h-screen w-full flex flex-col relative bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 transition-colors duration-250",
+        "min-h-screen w-full flex flex-col relative bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 transition-colors duration-250",
         clipHorizontal ? "overflow-x-clip" : "overflow-x-visible",
       )}
     >

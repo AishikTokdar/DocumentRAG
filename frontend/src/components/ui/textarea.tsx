@@ -79,9 +79,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={textareaRef}
           className={cn(
             // Base styles
-            "block min-h-[100px] w-full max-w-full rounded-xl border bg-white/5 px-4 py-3 text-sm text-white placeholder:text-slate-300",
+            "block min-h-[100px] w-full max-w-full rounded-xl border bg-white dark:bg-stone-900 px-4 py-3 text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500",
             // Focus styles
-            "focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50",
+            "focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40",
             // Transition
             "transition-all duration-200",
             // Disabled styles
@@ -89,7 +89,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
             // Error styles
             error
               ? "border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50"
-              : "border-white/20",
+              : "border-stone-200 dark:border-stone-700",
             // Resize behavior
             autoResize ? "resize-none overflow-hidden" : "resize-y",
             // Bottom padding for character count
@@ -110,7 +110,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
               "absolute bottom-2 right-3 text-xs",
               maxLength && charCount >= maxLength
                 ? "text-red-400"
-                : "text-slate-300",
+                : "text-stone-400 dark:text-stone-500",
             )}
           >
             {charCount}

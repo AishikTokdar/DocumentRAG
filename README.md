@@ -15,15 +15,16 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
 
 ---
 
-## Table of Contents
+### Table of Contents
 
 - [Core Capabilities](#core-capabilities)
+- [Multi-Key Support for AI Models & Embeddings](#multi-key-support-for-ai-models--embeddings)
 - [System Architecture & Data Flow](#system-architecture--data-flow)
 - [Component Breakdown & Context](#component-breakdown--context)
 - [Smart Zero-Config Defaults Architecture](#smart-zero-config-defaults-architecture)
-- [Deployment Guides](#deployment-guides)
-  - [Option 1: Hugging Face Spaces (Backend Docker / Python SDK)](#option-1-hugging-face-spaces-backend-docker--python-sdk)
-  - [Option 2: Vercel (Frontend) + Render (Backend)](#option-2-vercel-frontend--render-backend)
+- [Cloud Deployment Guides](#cloud-deployment-guides)
+  - [1. Deploy Backend to Hugging Face Spaces](#1-deploy-backend-to-hugging-face-spaces-zerogpu-gradio)
+  - [2. Deploy Frontend to a Global CDN (Vercel or Cloudflare)](#2-deploy-frontend-to-a-global-cdn-vercel-or-cloudflare)
   - [Option 3: PythonAnywhere (Backend Web Service)](#option-3-pythonanywhere-backend-web-service)
   - [Option 4: Docker & Docker Compose (Local / Self-Hosted / Coolify)](#option-4-docker--docker-compose-local--self-hosted--coolify)
 - [Local Bash Deployment Guide](#local-bash-deployment-guide)
@@ -37,16 +38,58 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
 
 ## Core Capabilities
 
+- **Default AI Model**: Powered by **Google Gemini 3.5 Flash** (`gemini-3.5-flash`) as the default model and provider for ultra-fast, high-accuracy multi-document reasoning.
+- **Multi-Key Support & Automatic Failover**: Configure multiple API keys per provider (e.g. `GOOGLE_API_KEY=key1,key2,key3`). DocumentRAG automatically rotates keys and performs intra-provider failover on HTTP 429 rate-limits.
 - **Multi-Document Ingestion**: Upload up to 3 PDF documents simultaneously with a combined size limit of 50 MB.
 - **Dual Knowledge Modes**:
   - **Hybrid Brain Mode**: Combines retrieved PDF citations with the AI's internal pretrained world knowledge for synthesized reasoning.
   - **Strict to Source Mode**: Enforces strict adherence to PDF context only, stating when information is absent.
 - **Local Zero-Key Embeddings**: Uses Hugging Face `sentence-transformers/all-MiniLM-L6-v2` running on CPU for vector embeddings, requiring zero external embedding API keys.
 - **7-Stage Multi-Agent Pipeline**: Executes Extractor, Analyzer, Preprocessor, Optimizer, Synthesizer, Validator, and Assembler stages for maximum answer grounding and reliability.
-- **Multi-Provider Failover**: Automatically switches between Google Gemini, Groq, Cerebras, SambaNova, Hugging Face, and OpenRouter if a key or model hits rate limits.
 - **SSE Token Streaming**: Real-time token-by-token streaming responses over Server-Sent Events.
 - **Formatted Chat Exports**: One-click exports of full conversation history to clean `.txt` files or print-formatted `.pdf` documents.
 - **Anonymous Session Isolation**: Browser-side Web Crypto UUID isolation ensures per-tab vector store privacy without mandatory user logins.
+
+---
+
+## Multi-Key Support for AI Models & Embeddings
+
+DocumentRAG includes built-in **Multi-Key Configuration & Rotation** for all AI providers (Google Gemini, Groq, Cerebras, SambaNova, Hugging Face, OpenRouter) for both LLM text generation and document embeddings.
+
+### Why Use Multi-Keys?
+- **Bypass Free-Tier Rate Limits (HTTP 429)**: Free AI tier endpoints (Google AI Studio, Groq Cloud, etc.) enforce strict requests-per-minute (RPM) caps. Adding multiple API keys allows DocumentRAG to distribute requests smoothly.
+- **Intra-Provider Key Failover**: When key 1 encounters a rate limit or quota limit, DocumentRAG immediately tries key 2 and key 3 for the *same* model/provider before switching to secondary fallback providers.
+- **Uninterrupted Real-Time SSE Streams**: Token streaming and multi-agent RAG reasoning continue seamlessly without throwing user-facing errors.
+
+### How to Add Multiple API Keys
+
+#### Method 1: Comma-Separated Values in `.env` (Recommended)
+Add multiple API keys to any provider key variable in `backend/.env`, separated by **commas**, **spaces**, or **semicolons**:
+
+```env
+# Google Gemini multi-key configuration
+GOOGLE_API_KEY="AIzaSyKeyOne..., AIzaSyKeyTwo..., AIzaSyKeyThree..."
+
+# Groq multi-key configuration
+GROQ_API_KEY="gsk_key1..., gsk_key2..."
+
+# OpenRouter multi-key configuration
+OPENROUTER_API_KEY="sk-or-v1-key1..., sk-or-v1-key2..."
+```
+
+#### Method 2: Plural Environment Variable Names (`*_KEYS`)
+DocumentRAG also automatically scans for plural environment variable aliases:
+
+```env
+GOOGLE_API_KEYS="AIzaSyKeyOne..., AIzaSyKeyTwo..."
+GROQ_API_KEYS="gsk_key1..., gsk_key2..."
+CEREBRAS_API_KEYS="csk_key1..., csk_key2..."
+```
+
+#### Method 3: Space or Semicolon Delimiters
+```env
+GOOGLE_API_KEY="AIzaSyKeyOne...; AIzaSyKeyTwo...; AIzaSyKeyThree..."
+```
 
 ---
 
@@ -163,14 +206,14 @@ DocumentRAG is built with **Smart Zero-Config Defaults**. You do **not** need to
 
 ---
 
-## Deployment Guides
+## Cloud Deployment Guides
 
-### Option 1: Hugging Face Spaces (Backend ZeroGPU Gradio)
+### 1. Deploy Backend to Hugging Face Spaces (ZeroGPU Gradio)
 
 Hugging Face Spaces provides a **100% FREE Tier (2 vCPU • 16 GB RAM / ZeroGPU Hardware)** with **zero credit card required** when using the native **Gradio SDK** (Python environment).
 
 #### Key Deployment Architecture:
-- **`app.py`**: Entrypoint for Hugging Face Spaces. Uses `@spaces.GPU` probe to register with ZeroGPU hardware scheduling and mounts the FastAPI application (`from app.main import app as fastapi_app`) via `gr.mount_gradio_app(fastapi_app, demo, path="/", ssr_mode=False)`.
+- **`app.py`**: Entrypoint for Hugging Face Spaces. Uses `@spaces.GPU` probe to register with ZeroGPU hardware scheduling and mounts the FastAPI application via `gr.mount_gradio_app(fastapi_app, demo, path="/", ssr_mode=False)`.
 - **`gradio_app.py`**: Standalone native Gradio 5.x UI dashboard featuring PDF uploading, RAG chat, model selector, and system health tabs.
 - **REST API Endpoints**: Exposes interactive Swagger UI at `/docs` and ReDoc at `/redoc`.
 
@@ -205,26 +248,35 @@ git push origin main
    - `GOOGLE_API_KEY`: `your_gemini_api_key`
    - `GROQ_API_KEY`: `your_groq_api_key`
    - `CORS_ORIGINS`: `*`
-3. Hugging Face Spaces will automatically build the environment, launch your backend on port `7860`, and expose both the interactive Gradio UI and FastAPI REST endpoints.
+3. Hugging Face Spaces will automatically build the environment, launch your backend on port `7860`, and expose both the interactive Gradio UI and FastAPI REST endpoints. 
+4. **Important**: Note your Space's direct backend URL (e.g. `https://YOUR_USERNAME-documentrag-backend.hf.space`). You will need this for the frontend!
 
 ---
 
-### Option 2: Vercel (Frontend) + Hugging Face (Backend)
+### 2. Deploy Frontend to a Global CDN (Vercel or Cloudflare)
 
-Decouple the frontend Single Page Application (hosted on Vercel's global Edge CDN) from the Python AI backend service running on Hugging Face Spaces. **100% free with zero credit card required**.
+Decouple the frontend Single Page Application from the backend and host it on a global CDN. **100% free with zero credit card required**.
 
-#### Step 1: Obtain Hugging Face Backend Direct URL
-Deploy your backend to Hugging Face Spaces (Option 1 above). Note your Space's direct backend URL:
-`https://YOUR_USERNAME-documentrag-backend.hf.space`
-
-#### Step 2: Deploy Frontend to Vercel
+#### Option A: Deploy Frontend to Vercel
 1. Log in to [Vercel](https://vercel.com/).
 2. Click **Add New...** -> **Project** and import your repository (`DocumentRAG`).
 3. Set **Root Directory**: `frontend`.
 4. **Framework Preset**: Vite.
 5. Add Environment Variables:
-   - `VITE_API_BASE_URL` = `https://YOUR_USERNAME-documentrag-backend.hf.space`
+   - `VITE_API_BASE_URL` = `https://YOUR_USERNAME-documentrag-backend.hf.space` (From Step 3 above)
 6. Click **Deploy**. Vercel will build and distribute the React SPA globally.
+
+#### Option B: Deploy Frontend to Cloudflare Pages
+1. Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com/) and go to **Workers & Pages**.
+2. Click **Create application** -> **Pages** -> **Connect to Git** and select your repository (`DocumentRAG`).
+3. Expand **Build settings** and configure:
+   - **Framework preset**: `Vite`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+   - **Root directory**: `frontend`
+4. Add Environment Variable:
+   - `VITE_API_BASE_URL` = `https://YOUR_USERNAME-documentrag-backend.hf.space` (From Step 3 above)
+5. Click **Save and Deploy**. Cloudflare will build and distribute the React SPA on their global Edge Network.
 
 ---
 
@@ -249,30 +301,32 @@ You can also deploy the backend service to [Render](https://render.com/) as a Do
 
 ### Option 4: Docker & Docker Compose Deployment
 
-For self-hosted VPS servers (Coolify, Hetzner, AWS EC2, DigitalOcean) or local containerized testing.
+For self-hosted VPS servers (Coolify, Hetzner, AWS EC2, DigitalOcean), Render Web Services, or local containerized testing.
 
-#### Method A: Standalone Backend Docker Container
-```bash
-cd backend
+#### Method A: Unified Single-Container (Full Stack)
+The repository includes a multi-stage `Dockerfile` in the root directory that builds both the React frontend and Python backend, serving them together securely from a single container on port `8000`.
 
-# Build Docker image
-docker build -t documentrag-backend .
+1. **Create Environment File**:
+   ```bash
+   cp backend/.env.example .env
+   # Edit .env and add your GOOGLE_API_KEY or GROQ_API_KEY
+   ```
+2. **Build and Run**:
+   ```bash
+   docker build -t documentrag-fullstack .
+   docker run -d -p 8000:8000 --env-file .env --name documentrag documentrag-fullstack
+   ```
+3. **Access**:
+   - Web App & API: `http://localhost:8000`
 
-# Run container with environment file
-docker run -d \
-  -p 8000:8000 \
-  --env-file .env \
-  --name documentrag-backend \
-  documentrag-backend
-```
-
-#### Method B: Docker Compose (Full Stack: Frontend + Backend)
+#### Method B: Docker Compose (Microservices)
+If you prefer running the Frontend (Nginx) and Backend (FastAPI) as decoupled containers:
 1. Create `backend/.env` from template:
    ```bash
    cp backend/.env.example backend/.env
    # Edit backend/.env and add GOOGLE_API_KEY or GROQ_API_KEY
    ```
-2. Launch full-stack container services:
+2. Launch services:
    ```bash
    docker compose up --build
    ```
@@ -334,8 +388,8 @@ npm run dev
 
 DocumentRAG supports 6 AI providers offering access to over 22 models. You only need to configure at least one valid key in your environment.
 
-### 1. Google Gemini API Key (`GOOGLE_API_KEY`)
-- **Supported Models**: `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`.
+### 1. Google Gemini API Key (`GOOGLE_API_KEY`) — Recommended Default
+- **Supported Models**: `gemini-3.5-flash` (Default), `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`.
 - **How to Get**:
   1. Visit [Google AI Studio](https://aistudio.google.com/).
   2. Sign in with your Google account.
@@ -359,8 +413,9 @@ DocumentRAG supports 6 AI providers offering access to over 22 models. You only 
   1. Visit [SambaNova Cloud Portal](https://cloud.sambanova.ai/).
   2. Access **API Keys** and generate your key.
 
-### 5. Hugging Face Access Token (`HF_API_KEY`)
-- **Supported Models**: `Qwen/Qwen2.5-Coder-32B-Instruct`, `mistralai/Mistral-7B-Instruct-v0.3`.
+### 5. Hugging Face Access Token (`HF_TOKEN` or `HF_API_KEY`)
+- **Supported Models**: `sentence-transformers/all-MiniLM-L6-v2` (Local CPU embeddings), `Qwen/Qwen2.5-Coder-32B-Instruct`, `mistralai/Mistral-7B-Instruct-v0.3`.
+- **Note**: Embeddings work out of the box without any key. Adding `HF_TOKEN` or `HF_API_KEY` grants higher Hugging Face Hub download & API rate limits seamlessly without errors.
 - **How to Get**:
   1. Visit [Hugging Face Settings Tokens](https://huggingface.co/settings/tokens).
   2. Click **Create new token** (Role: Read) and copy the token.
@@ -376,9 +431,9 @@ DocumentRAG supports 6 AI providers offering access to over 22 models. You only 
 ## Environment Configuration (.env Reference)
 
 ### Minimum Backend Environment (`backend/.env`)
-Only your chosen API keys are required:
+Only your chosen API keys are required (multi-keys supported via comma separation):
 ```env
-GOOGLE_API_KEY=your_google_gemini_api_key_here
+GOOGLE_API_KEY=your_google_gemini_api_key_1,your_google_gemini_api_key_2
 GROQ_API_KEY=your_groq_api_key_here
 ```
 
@@ -392,7 +447,7 @@ ENVIRONMENT=production
 # CORS Origins (Use * or comma-separated origins)
 CORS_ORIGINS=*
 
-# AI API Keys (Configure at least one)
+# AI API Keys (Configure at least one; multi-keys comma-separated)
 GOOGLE_API_KEY=your_google_gemini_api_key_here
 GROQ_API_KEY=your_groq_api_key_here
 CEREBRAS_API_KEY=your_cerebras_api_key_here
@@ -401,7 +456,7 @@ HF_API_KEY=your_huggingface_token_here
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 
 # Default Model Selection
-DEFAULT_MODEL=gemini-2.5-flash
+DEFAULT_MODEL=gemini-3.5-flash
 DEFAULT_PROVIDER=gemini
 
 # Vector Store & Session Limits

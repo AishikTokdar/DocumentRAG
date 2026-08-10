@@ -5,6 +5,7 @@ Manages environment variables, API keys, and provider configurations.
 """
 
 import os
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -22,6 +23,22 @@ _DEFAULT_CORS_ORIGINS: list[str] = [
 ]
 
 
+def parse_api_keys(raw: str | None) -> list[str]:
+    """
+    Parse a string containing single or multiple API keys separated by commas,
+    semicolons, whitespace, or newlines into a deduplicated list of valid keys.
+    """
+    if not raw:
+        return []
+    tokens = re.split(r'[,\s;]+', raw.strip())
+    keys: list[str] = []
+    for t in tokens:
+        cleaned = t.strip()
+        if cleaned and cleaned not in keys:
+            keys.append(cleaned)
+    return keys
+
+
 class AIProvider:
     """
     Configuration for an AI provider.
@@ -31,7 +48,7 @@ class AIProvider:
         base_url: API endpoint URL
         api_key_env: Environment variable name for API key
         models: List of supported model identifiers
-        is_enabled: Whether this provider has a valid key
+        is_enabled: Whether this provider has at least one valid key
     """
 
     def __init__(
@@ -49,29 +66,60 @@ class AIProvider:
         self.models = models
         self.embedding_model = embedding_model
         self.is_openai_compatible = is_openai_compatible
-        self._api_key: str | None = None
+        self._api_keys: list[str] | None = None
+
+    @property
+    def api_keys(self) -> list[str]:
+        """Get list of parsed API keys for this provider from environment."""
+        keys: list[str] = []
+        val = os.getenv(self.api_key_env)
+        if val:
+            for k in parse_api_keys(val):
+                if k not in keys:
+                    keys.append(k)
+
+        plural_env = f"{self.api_key_env}S"
+        val_plural = os.getenv(plural_env)
+        if val_plural:
+            for k in parse_api_keys(val_plural):
+                if k not in keys:
+                    keys.append(k)
+
+        if self.name == "openrouter":
+            val_oai = os.getenv("OPENAI_API_KEY")
+            if val_oai:
+                for k in parse_api_keys(val_oai):
+                    if k not in keys:
+                        keys.append(k)
+
+        if self.name == "huggingface":
+            for env_name in ["HF_TOKEN", "HUGGINGFACEHUB_API_TOKEN"]:
+                val_hf = os.getenv(env_name)
+                if val_hf:
+                    for k in parse_api_keys(val_hf):
+                        if k not in keys:
+                            keys.append(k)
+
+        return keys
 
     @property
     def api_key(self) -> str | None:
-        """Get API key from environment."""
-        if self._api_key is None:
-            self._api_key = os.getenv(self.api_key_env)
-            if not self._api_key and self.name == "openrouter":
-                self._api_key = os.getenv("OPENAI_API_KEY")
-        return self._api_key
+        """Get primary API key from environment (backwards compatibility)."""
+        keys = self.api_keys
+        return keys[0] if keys else None
 
     @property
     def is_enabled(self) -> bool:
-        """Check if provider has valid API key."""
-        return bool(self.api_key)
+        """Check if provider has valid API key(s)."""
+        return len(self.api_keys) > 0
 
 
 # ---------------------------------------------------------------------------
-# ---------------------------------------------------------------------------
-# Supported providers with a no-cost/trial API path (order = default fallback priority).
-# Model IDs were reviewed against provider model/rate-limit pages on 2026-08-07.
-# Free access is quota/credit based and can change without notice; keep this catalog
-# conservative so the default path never selects a paid model by accident.
+# Supported providers with a documented free-tier API path (order = default fallback priority).
+# Model IDs were rechecked against provider model/rate-limit pages on 2026-08-10.
+# Free access is quota/credit based and can change without notice. SambaNova and
+# Hugging Face use introductory monthly credits; they stop being free after credits
+# are exhausted unless the account purchases more.
 # ---------------------------------------------------------------------------
 AI_PROVIDERS: dict[str, AIProvider] = {
     "gemini": AIProvider(
@@ -92,11 +140,11 @@ AI_PROVIDERS: dict[str, AIProvider] = {
         base_url="https://api.groq.com/openai/v1",
         api_key_env="GROQ_API_KEY",
         models=[
-            "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b",
-            "qwen/qwen3.6-27b",
             "llama-3.3-70b-versatile",
             "llama-3.1-8b-instant",
+            "qwen/qwen3.6-27b",
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
         ],
         embedding_model=None,
     ),
@@ -105,11 +153,9 @@ AI_PROVIDERS: dict[str, AIProvider] = {
         base_url="https://api.cerebras.ai/v1",
         api_key_env="CEREBRAS_API_KEY",
         models=[
-            "gpt-oss-120b",
-            "zai-glm-4.7",
-            "gemma-4-31b",
             "llama3.1-8b",
-            "qwen-3-235b-a22b-instruct-2507",
+            "zai-glm-4.7",
+            "gpt-oss-120b",
         ],
         embedding_model=None,
     ),
@@ -118,11 +164,13 @@ AI_PROVIDERS: dict[str, AIProvider] = {
         base_url="https://api.sambanova.ai/v1",
         api_key_env="SAMBANOVA_API_KEY",
         models=[
-            "DeepSeek-R1",
-            "DeepSeek-V3-0324",
-            "Llama-4-Maverick-17B-128E-Instruct",
+            "DeepSeek-V3.1-cb",
+            "DeepSeek-V3.1",
+            "DeepSeek-V3.2",
+            "gemma-4-31B-it",
+            "gpt-oss-120b",
             "Meta-Llama-3.3-70B-Instruct",
-            "Qwen3-32B",
+            "MiniMax-M2.7",
         ],
         embedding_model=None,
     ),
@@ -133,8 +181,6 @@ AI_PROVIDERS: dict[str, AIProvider] = {
         models=[
             "openai/gpt-oss-120b",
             "Qwen/Qwen3-32B",
-            "meta-llama/Llama-3.3-70B-Instruct",
-            "mistralai/Mistral-Small-3.1-24B-Instruct-2503",
         ],
         embedding_model="sentence-transformers/all-MiniLM-L6-v2",
     ),
@@ -144,11 +190,11 @@ AI_PROVIDERS: dict[str, AIProvider] = {
         api_key_env="OPENROUTER_API_KEY",
         models=[
             "openrouter/free",
-            "openai/gpt-oss-120b:free",
-            "openai/gpt-oss-20b:free",
             "nvidia/nemotron-3-super-120b-a12b:free",
             "nvidia/nemotron-3-nano-30b-a3b:free",
             "nvidia/nemotron-nano-9b-v2:free",
+            "openai/gpt-oss-120b:free",
+            "openai/gpt-oss-20b:free",
         ],
         embedding_model=None,
     ),
@@ -156,7 +202,7 @@ AI_PROVIDERS: dict[str, AIProvider] = {
 
 # Ordered priority for automatic free failover attempts
 PROVIDER_PRIORITY: list[str] = [
-    "groq", "gemini", "cerebras", "sambanova", "huggingface", "openrouter",
+    "gemini", "groq", "cerebras", "sambanova", "huggingface", "openrouter",
 ]
 
 
@@ -184,7 +230,10 @@ class Settings(BaseSettings):
     )
     groq_api_key: str | None = None
     google_api_key: str | None = None
-    hf_api_key: str | None = None
+    hf_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HF_API_KEY", "HF_TOKEN", "HUGGINGFACEHUB_API_TOKEN"),
+    )
     openai_direct_api_key: str | None = None
 
     # When false (default), direct OpenAI is not used for PDF embeddings — only OpenRouter
@@ -193,8 +242,8 @@ class Settings(BaseSettings):
     embedding_openai_direct: bool = Field(default=False)
 
     # Default AI settings
-    default_model: str = "openai/gpt-oss-120b"
-    default_provider: str = "groq"
+    default_model: str = "gemini-3.5-flash"
+    default_provider: str = "gemini"
     temperature: float = 0.0
     max_tokens: int = 2048
 
@@ -248,18 +297,20 @@ def get_settings() -> Settings:
 
 def provider_has_credentials(provider: AIProvider) -> bool:
     """True if LLM calls can authenticate (env + pydantic Settings)."""
+    if len(provider.api_keys) > 0:
+        return True
     settings = get_settings()
     if provider.name == "openrouter":
-        return bool(provider.api_key or settings.openrouter_api_key)
+        return len(parse_api_keys(settings.openrouter_api_key)) > 0
     if provider.name == "openai":
-        return bool(provider.api_key or settings.openai_direct_api_key)
+        return len(parse_api_keys(settings.openai_direct_api_key)) > 0
     if provider.name == "groq":
-        return bool(provider.api_key or settings.groq_api_key)
+        return len(parse_api_keys(settings.groq_api_key)) > 0
     if provider.name == "gemini":
-        return bool(provider.api_key or settings.google_api_key)
+        return len(parse_api_keys(settings.google_api_key)) > 0
     if provider.name == "huggingface":
-        return bool(provider.api_key or settings.hf_api_key)
-    return bool(provider.api_key)
+        return len(parse_api_keys(settings.hf_api_key)) > 0
+    return False
 
 
 def get_available_providers() -> list[str]:
@@ -305,7 +356,7 @@ def get_embedding_fallback_chain() -> list[tuple[AIProvider, str]]:
     Ordered embedding backends to try (upload / index build).
 
     Puts the configured default provider first when it defines an embedding model,
-    then walks PROVIDER_PRIORITY (OpenRouter, Gemini, Hugging Face, OpenAI; Groq skipped when no embedding_model).
+    then walks PROVIDER_PRIORITY (Gemini, Groq, Cerebras, SambaNova, Hugging Face, OpenRouter).
     Direct OpenAI embeddings run only if embedding_openai_direct is true.
     """
     chain: list[tuple[AIProvider, str]] = []
@@ -313,21 +364,13 @@ def get_embedding_fallback_chain() -> list[tuple[AIProvider, str]]:
     settings = get_settings()
 
     def has_embedding_key(provider: AIProvider) -> bool:
-        if provider.name == "openrouter":
-            return bool(provider.api_key or settings.openrouter_api_key)
-        if provider.name == "openai":
-            if not settings.embedding_openai_direct:
-                return False
-            return bool(provider.api_key or settings.openai_direct_api_key)
-        if provider.name == "groq":
-            if not provider.embedding_model:
-                return False
-            return bool(provider.api_key or settings.groq_api_key)
-        if provider.name == "gemini":
-            return bool(provider.api_key or settings.google_api_key)
-        if provider.name == "huggingface":
-            return bool(provider.api_key or settings.hf_api_key)
-        return provider.is_enabled
+        if not provider_has_credentials(provider):
+            return False
+        if provider.name == "openai" and not settings.embedding_openai_direct:
+            return False
+        if provider.name == "groq" and not provider.embedding_model:
+            return False
+        return bool(provider.embedding_model)
 
     def append_provider(provider: AIProvider | None) -> None:
         if provider is None or not has_embedding_key(provider):
@@ -348,7 +391,7 @@ def get_embedding_fallback_chain() -> list[tuple[AIProvider, str]]:
 
     gem = AI_PROVIDERS.get("gemini")
     if gem and has_embedding_key(gem):
-        m2 = "gemini-embedding-2-preview"
+        m2 = "gemini-embedding-2"
         sig = (gem.base_url, m2)
         if sig not in seen:
             seen.add(sig)

@@ -5,7 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_openai import ChatOpenAI
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+except ImportError:
+    from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -67,18 +71,17 @@ def load_and_process_pdf(pdf_path: str):
     )
     chunks = text_splitter.split_documents(documents)
     
-    # Create embeddings and vector store (using OpenRouter)
-    embeddings = OpenAIEmbeddings(
-        base_url=OPENROUTER_API_BASE,
-        model="openai/text-embedding-3-small",
-        api_key=OPENROUTER_API_KEY,
+    # Use a local, open embedding model so ingestion never incurs API charges.
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        model_kwargs={"device": "cpu"},
     )
     vectorstore = FAISS.from_documents(chunks, embeddings)
     
     # Create the retrieval QA chain using LCEL (LangChain Expression Language)
     llm = ChatOpenAI(
         temperature=0,
-        model="openai/gpt-4o-mini",
+        model="openrouter/free",
         base_url=OPENROUTER_API_BASE,
         api_key=OPENROUTER_API_KEY,
     )

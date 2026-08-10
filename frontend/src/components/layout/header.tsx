@@ -6,7 +6,6 @@ import {
   X,
   FileText,
   MessageSquare,
-  Info,
   Github,
   Sun,
   Moon,
@@ -34,7 +33,7 @@ export function Header() {
 
   const healthColor =
     status === "connected"
-      ? "bg-emerald-500"
+      ? "bg-lime-500"
       : status === "disconnected"
         ? "bg-red-500"
         : "bg-amber-500 animate-pulse";
@@ -44,16 +43,16 @@ export function Header() {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md transition-colors"
+      className="sticky top-0 z-50 border-b border-stone-200 dark:border-stone-800 bg-white/80 dark:bg-stone-950/80 backdrop-blur-md transition-colors"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <nav className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="h-8 w-8 rounded-lg bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-zinc-100 dark:text-zinc-900 font-bold text-sm transition-transform group-hover:scale-105">
+            <div className="h-8 w-8 rounded-lg bg-amber-500 dark:bg-amber-500 flex items-center justify-center text-white font-bold text-sm transition-transform group-hover:scale-105 shadow-sm shadow-amber-500/20">
               D
             </div>
-            <span className="text-base font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
+            <span className="text-base font-semibold text-stone-900 dark:text-stone-100 tracking-tight">
               {APP_CONFIG.name}
             </span>
           </Link>
@@ -65,7 +64,6 @@ export function Header() {
               const iconMap: Record<string, typeof FileText> = {
                 "/": FileText,
                 "/chat": MessageSquare,
-                "/about": Info,
               };
               const Icon = iconMap[link.href] ?? FileText;
 
@@ -76,8 +74,8 @@ export function Header() {
                   className={cn(
                     "flex items-center gap-1.5 text-sm font-medium transition-colors px-2.5 py-1.5 rounded-lg",
                     isActive
-                      ? "text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800/60"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-900",
+                      ? "text-stone-900 dark:text-stone-100 bg-stone-100 dark:bg-stone-800/60"
+                      : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-50 dark:hover:bg-stone-900",
                   )}
                 >
                   <Icon className="w-4 h-4" />
@@ -90,7 +88,7 @@ export function Header() {
 
             {/* Health Indicator */}
             <div
-              className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-400"
+              className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-stone-200 dark:border-stone-800 text-xs font-medium text-stone-600 dark:text-stone-400"
               title={`Backend Status: ${status}`}
             >
               <span className={cn("w-2 h-2 rounded-full", healthColor)} />
@@ -101,10 +99,10 @@ export function Header() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              className="p-2 rounded-lg text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
               aria-label="Toggle dark/light theme"
             >
-              {isDark ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-zinc-700" />}
+              {isDark ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-stone-700" />}
             </button>
 
             {/* GitHub */}
@@ -112,13 +110,13 @@ export function Header() {
               href={SOCIAL_LINKS.repository}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className="p-2 rounded-lg text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
               aria-label="GitHub Repository"
             >
               <Github className="w-4 h-4" />
             </a>
 
-            <Button variant="default" size="sm" asChild>
+            <Button variant="default" size="sm" asChild className="bg-stone-900 hover:bg-stone-800 text-white dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-stone-200">
               <Link to="/chat">Launch App</Link>
             </Button>
           </div>
@@ -128,13 +126,13 @@ export function Header() {
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+              className="p-2 rounded-lg text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 cursor-pointer"
               aria-label="Toggle theme"
             >
-              {isDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-zinc-700" />}
+              {isDark ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-stone-700" />}
             </button>
             <button
-              className="p-2 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              className="p-2 text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg transition-colors"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label="Toggle Menu"
             >
@@ -152,7 +150,7 @@ export function Header() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-4 py-4 space-y-2"
+            className="md:hidden border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-950 px-4 py-4 space-y-2"
           >
             {NAV_LINKS.map((link) => {
               const isActive = location.pathname === link.href;
@@ -163,8 +161,8 @@ export function Header() {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                      : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900",
+                      ? "bg-stone-100 dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+                      : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-900",
                   )}
                 >
                   {link.label}
@@ -172,10 +170,10 @@ export function Header() {
               );
             })}
             <a
-              href={joinApiUrl("/docs")}
+              href={joinApiUrl("/redoc")}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-900"
             >
               <BookOpen className="w-4 h-4" />
               API Documentation
@@ -183,7 +181,7 @@ export function Header() {
             </a>
             <Link
               to="/api-status"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-900"
             >
               <LineChart className="w-4 h-4" />
               API Status

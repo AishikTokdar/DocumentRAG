@@ -35,7 +35,7 @@ class _FakePipeline:
         if agent is self.assembler:
             return (
                 True,
-                {"answer": data, "model_used": "openai/gpt-4o-mini", "sources": ["2"]},
+                {"answer": data, "model_used": "openrouter/free", "sources": ["2"]},
                 1.0,
                 None,
             )
@@ -50,9 +50,9 @@ class _FakeLLMService:
         model: str | None = None,
         hybrid_mode: bool = True,
     ) -> AsyncGenerator[dict[str, str], None]:
-        yield {"type": "token", "content": "Hello", "model_used": "openai/gpt-4o-mini"}
-        yield {"type": "token", "content": " world", "model_used": "openai/gpt-4o-mini"}
-        yield {"type": "complete", "model_used": "openai/gpt-4o-mini"}
+        yield {"type": "token", "content": "Hello", "model_used": "openrouter/free"}
+        yield {"type": "token", "content": " world", "model_used": "openrouter/free"}
+        yield {"type": "complete", "model_used": "openrouter/free"}
 
 
 def _parse_sse_line(block: str) -> tuple[str, dict]:
@@ -93,7 +93,7 @@ class TestChatStreamSSE(unittest.TestCase):
         self.assertEqual(token_payloads[1].get("content"), " world")
         self.assertEqual(len(done_payloads), 1)
         self.assertEqual(done_payloads[0].get("sources"), ["2"])
-        self.assertEqual(done_payloads[0].get("model_used"), "openai/gpt-4o-mini")
+        self.assertEqual(done_payloads[0].get("model_used"), "openrouter/free")
 
 
 if __name__ == "__main__":

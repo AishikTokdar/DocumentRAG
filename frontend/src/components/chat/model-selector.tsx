@@ -142,21 +142,21 @@ export function ModelSelector({
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
           "flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl text-xs font-medium border transition-all w-full cursor-pointer",
-          "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs",
-          "hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-zinc-300 dark:hover:border-zinc-700",
+          "bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 text-stone-900 dark:text-stone-100 shadow-xs",
+          "hover:bg-stone-50 dark:hover:bg-stone-800/80 hover:border-stone-300 dark:hover:border-stone-700",
           "disabled:pointer-events-none disabled:opacity-50",
         )}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <SelectedIcon className="w-4 h-4 text-zinc-500 shrink-0" />
+          <SelectedIcon className="w-4 h-4 text-stone-500 shrink-0" />
           <span className="truncate font-semibold">{selected?.name ?? "Select model"}</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 uppercase font-mono border border-zinc-200 dark:border-zinc-700 shrink-0">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-stone-500 uppercase font-mono border border-stone-200 dark:border-stone-700 shrink-0">
             {selected?.provider}
           </span>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-1">
           {selected?.isAvailable !== false ? (
-            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/60">
+            <span className="inline-flex items-center gap-1 text-[10px] text-lime-600 dark:text-lime-400 font-semibold bg-lime-50 dark:bg-lime-950/40 px-2 py-0.5 rounded-md border border-lime-200 dark:border-lime-800/60">
               <CheckCircle2 className="w-2.5 h-2.5" />
               Ready
             </span>
@@ -166,7 +166,7 @@ export function ModelSelector({
               Key Needed
             </span>
           )}
-          <ChevronDown className={cn("w-3.5 h-3.5 transition-transform text-zinc-400", isOpen && "rotate-180")} />
+          <ChevronDown className={cn("w-3.5 h-3.5 transition-transform text-stone-400", isOpen && "rotate-180")} />
         </div>
       </button>
 
@@ -178,24 +178,24 @@ export function ModelSelector({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.12 }}
-            className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden max-h-96 flex flex-col"
+            className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl overflow-hidden max-h-96 flex flex-col"
           >
             {/* Header with Provider Dropdown Filter */}
-            <div className="p-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/80 space-y-2 shrink-0">
+            <div className="p-3 border-b border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-950/80 space-y-2 shrink-0">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-zinc-900 dark:text-zinc-100">Select AI Model</span>
-                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
+                <span className="font-bold text-stone-900 dark:text-stone-100">Select AI Model</span>
+                <span className="text-[10px] font-semibold text-lime-600 dark:text-lime-400 bg-lime-50 dark:bg-lime-950/40 px-2 py-0.5 rounded-md border border-lime-200 dark:border-lime-800/40">
                   {availableModels.length} Ready
                 </span>
               </div>
 
               {/* Vertical Dropdown Filter */}
               <div className="relative flex items-center">
-                <Filter className="w-3.5 h-3.5 absolute left-2.5 text-zinc-400 pointer-events-none" />
+                <Filter className="w-3.5 h-3.5 absolute left-2.5 text-stone-400 pointer-events-none" />
                 <select
                   value={selectedProviderFilter}
                   onChange={handleProviderSelectChange}
-                  className="w-full pl-8 pr-8 py-1.5 rounded-xl text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 appearance-none font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                  className="w-full pl-8 pr-8 py-1.5 rounded-xl text-xs bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 appearance-none font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-stone-400"
                 >
                   <option value="all">Filter Provider: All ({sortedModels.length} models)</option>
                   {groupedProviders.map(([provKey, provModels]) => {
@@ -207,7 +207,7 @@ export function ModelSelector({
                     );
                   })}
                 </select>
-                <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 text-zinc-400 pointer-events-none" />
+                <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 text-stone-400 pointer-events-none" />
               </div>
             </div>
 
@@ -233,13 +233,13 @@ export function ModelSelector({
                   return (
                     <div key={provKey} className="space-y-1">
                       {/* Provider Vertical Section Header */}
-                      <div className="flex items-center justify-between px-2 py-1 text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider bg-zinc-100/60 dark:bg-zinc-800/40 rounded-lg">
+                      <div className="flex items-center justify-between px-2 py-1 text-[11px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider bg-stone-100/60 dark:bg-stone-800/40 rounded-lg">
                         <div className="flex items-center gap-1.5">
                           <ProvIcon className="w-3.5 h-3.5" />
                           <span>{provInfo.label}</span>
                         </div>
                         {hasReadyInProv ? (
-                          <span className="text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-800/40">
+                          <span className="text-[9px] font-semibold text-lime-600 dark:text-lime-400 bg-lime-50 dark:bg-lime-950/40 px-1.5 py-0.2 rounded border border-lime-200 dark:border-lime-800/40">
                             Ready
                           </span>
                         ) : (
@@ -267,17 +267,17 @@ export function ModelSelector({
                             className={cn(
                               "w-full flex items-center justify-between px-3 py-2 rounded-xl text-left text-xs transition-all cursor-pointer select-none group",
                               isConfigured
-                                ? "bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                                : "opacity-50 hover:opacity-75 bg-zinc-50/50 dark:bg-zinc-950/50 text-zinc-500 dark:text-zinc-400",
-                              isSelected && "bg-zinc-100 dark:bg-zinc-800 font-semibold ring-1 ring-zinc-300 dark:ring-zinc-700",
+                                ? "bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-900 dark:text-stone-100"
+                                : "opacity-50 hover:opacity-75 bg-stone-50/50 dark:bg-stone-950/50 text-stone-500 dark:text-stone-400",
+                              isSelected && "bg-stone-100 dark:bg-stone-800 font-semibold ring-1 ring-stone-300 dark:ring-stone-700",
                             )}
                           >
                             <div className="min-w-0 pr-2">
-                              <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                              <div className="font-medium text-stone-900 dark:text-stone-100 truncate">
                                 {model.name}
                               </div>
                               {model.description && (
-                                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+                                <p className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
                                   {model.description}
                                 </p>
                               )}
@@ -285,7 +285,7 @@ export function ModelSelector({
 
                             <div className="flex items-center gap-1.5 shrink-0">
                               {isConfigured ? (
-                                <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded font-mono border border-emerald-200 dark:border-emerald-800/40">
+                                <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-lime-600 dark:text-lime-400 bg-lime-50 dark:bg-lime-950/40 px-1.5 py-0.5 rounded font-mono border border-lime-200 dark:border-lime-800/40">
                                   Ready
                                 </span>
                               ) : (
@@ -293,7 +293,7 @@ export function ModelSelector({
                                   Key Needed
                                 </span>
                               )}
-                              {isSelected && <Check className="w-4 h-4 text-emerald-500 shrink-0 ml-1" />}
+                              {isSelected && <Check className="w-4 h-4 text-lime-500 shrink-0 ml-1" />}
                             </div>
                           </div>
                         );

@@ -3,15 +3,15 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const glassCardShellVariants = cva(
-  "relative border bg-white dark:bg-zinc-900/90 border-zinc-200 dark:border-zinc-800 transition-all duration-200",
+  "relative border bg-white dark:bg-stone-900/90 border-stone-200 dark:border-stone-800 transition-all duration-200",
   {
     variants: {
       variant: {
         default: "shadow-sm",
         hover:
-          "shadow-sm hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-700 hover:scale-[1.01]",
-        glow: "shadow-md border-zinc-300 dark:border-zinc-700",
-        outline: "bg-transparent border-2 border-zinc-200 dark:border-zinc-800",
+          "shadow-sm hover:shadow-md hover:border-stone-400 dark:hover:border-stone-600 hover:scale-[1.01]",
+        glow: "shadow-md border-stone-300 dark:border-stone-700",
+        outline: "bg-transparent border-2 border-stone-200 dark:border-stone-800",
       },
       radius: {
         default: "rounded-2xl",
@@ -87,7 +87,7 @@ const GlassCardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-lg font-semibold leading-tight tracking-tight text-zinc-900 dark:text-zinc-100",
+      "text-lg font-semibold leading-tight tracking-tight text-stone-900 dark:text-stone-100",
       className,
     )}
     {...props}
@@ -101,7 +101,7 @@ const GlassCardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-zinc-500 dark:text-zinc-400", className)}
+    className={cn("text-sm text-stone-500 dark:text-stone-400", className)}
     {...props}
   />
 ));
@@ -111,7 +111,7 @@ const GlassCardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("text-zinc-900 dark:text-zinc-100", className)} {...props} />
+  <div ref={ref} className={cn("text-stone-900 dark:text-stone-100", className)} {...props} />
 ));
 GlassCardContent.displayName = "GlassCardContent";
 
@@ -122,7 +122,7 @@ const GlassCardFooter = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "flex items-center pt-4 border-t border-zinc-200 dark:border-zinc-800",
+      "flex items-center pt-4 border-t border-stone-200 dark:border-stone-800",
       className,
     )}
     {...props}

@@ -47,7 +47,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       return (
         <div className={cn("relative flex items-center", wrapperClassName)}>
           {startIcon && (
-            <span className="absolute left-3 text-white/90 pointer-events-none">
+            <span className="absolute left-3 text-stone-500 pointer-events-none">
               {startIcon}
             </span>
           )}
@@ -55,9 +55,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             type={type}
             className={cn(
               // Base styles
-              "flex h-11 w-full rounded-xl border bg-white/5 px-4 py-2 text-sm text-white placeholder:text-slate-300",
+              "flex h-11 w-full rounded-xl border bg-white dark:bg-stone-900 px-4 py-2 text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500",
               // Focus styles
-              "focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50",
+              "focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40",
               // Transition
               "transition-all duration-200",
               // Disabled styles
@@ -65,7 +65,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               // Error styles
               error
                 ? "border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50"
-                : "border-white/20",
+                : "border-stone-200 dark:border-stone-700",
               // Icon padding
               startIcon && "pl-10",
               endIcon && "pr-10",
@@ -76,7 +76,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {endIcon && (
-            <span className="absolute right-3 text-white/90 pointer-events-none">
+            <span className="absolute right-3 text-stone-500 pointer-events-none">
               {endIcon}
             </span>
           )}
@@ -90,9 +90,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         className={cn(
           // Base styles
-          "flex h-11 w-full rounded-xl border bg-white/5 px-4 py-2 text-sm text-white placeholder:text-slate-300",
+          "flex h-11 w-full rounded-xl border bg-white dark:bg-stone-900 px-4 py-2 text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500",
           // Focus styles
-          "focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50",
+          "focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40",
           // Transition
           "transition-all duration-200",
           // Disabled styles
@@ -100,7 +100,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           // Error styles
           error
             ? "border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50"
-            : "border-white/20",
+            : "border-stone-200 dark:border-stone-700",
           className,
         )}
         ref={ref}

@@ -43,15 +43,26 @@ import {
 import { getChatEntryReactKey } from "@/lib/chat-history";
 import { ConfirmAlertDialog } from "@/components/ui/confirm-alert-dialog";
 import { SESSION_INDEX_RETENTION_DAYS } from "@/lib/session-retention";
+import { marked } from "marked";
 
-const DEFAULT_CHAT_MODEL_ID = "gemini-2.5-flash";
+const DEFAULT_CHAT_MODEL_ID = "gemini-3.5-flash";
 
 function exportAsTXT(chatHistory: ChatEntry[], activeSessionName?: string) {
   if (chatHistory.length === 0) return;
+  
+  const stripMarkdown = (md: string) => {
+    return md
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/(?<!\*)\*(?!\*)(.*?)\*/g, "$1") // single asterisk
+      .replace(/`(.*?)`/g, "$1")
+      .replace(/^#+\s+(.*)$/gm, "$1")
+      .replace(/\[(.*?)\]\(.*?\)/g, "$1");
+  };
+
   const header = `==================================================\nDocumentRAG Conversation Export\nDocument: ${activeSessionName || "Indexed PDF"}\nExported Date: ${new Date().toLocaleString()}\n==================================================\n\n`;
   const body = chatHistory
     .map((e, idx) => {
-      let text = `[Question ${idx + 1}]\n${e.question}\n\n[Answer]\n${e.answer}\n`;
+      let text = `[Question ${idx + 1}]\n${e.question}\n\n[Answer]\n${stripMarkdown(e.answer)}\n`;
       if (e.modelUsed) text += `Model Used: ${e.modelUsed}\n`;
       if (e.sources && e.sources.length) {
         text += `Citations:\n` + e.sources.map((s) => `  - ${s}`).join("\n") + "\n";
@@ -69,7 +80,7 @@ function exportAsTXT(chatHistory: ChatEntry[], activeSessionName?: string) {
   URL.revokeObjectURL(url);
 }
 
-function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string) {
+async function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string) {
   if (chatHistory.length === 0) return;
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
@@ -81,6 +92,32 @@ function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string) {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+
+  const itemsHtmlArray = await Promise.all(
+    chatHistory.map(async (e, idx) => {
+      // marked.parse can be async depending on extensions, wrapping in Promise.resolve is safe
+      const parsedAnswer = await Promise.resolve(marked.parse(e.answer));
+      return `
+        <div class="message-card">
+          <div class="question-box">Q${idx + 1}: ${escapeHtml(e.question)}</div>
+          <div class="answer-box markdown-body">
+            ${parsedAnswer}
+            ${e.modelUsed ? `<div class="model-tag">Model: ${escapeHtml(e.modelUsed)}</div>` : ""}
+            ${
+              e.sources && e.sources.length
+                ? `
+              <div class="citations-box">
+                <div class="citations-title">Document Citations:</div>
+                ${e.sources.map((s) => `<div class="citation-item">• ${escapeHtml(s)}</div>`).join("")}
+              </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
+      `;
+    })
+  );
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -160,6 +197,42 @@ function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string) {
           color: #52525b;
           margin-top: 2px;
         }
+        .markdown-body {
+          font-family: inherit;
+        }
+        .markdown-body p { margin-top: 0; margin-bottom: 12px; }
+        .markdown-body p:last-child { margin-bottom: 0; }
+        .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+          margin-top: 20px;
+          margin-bottom: 12px;
+          font-weight: 700;
+          color: #09090b;
+        }
+        .markdown-body ul, .markdown-body ol {
+          margin-top: 0;
+          margin-bottom: 12px;
+          padding-left: 24px;
+        }
+        .markdown-body li { margin-bottom: 6px; }
+        .markdown-body code {
+          background: #f4f4f5;
+          padding: 2px 4px;
+          border-radius: 4px;
+          font-family: monospace;
+          font-size: 12.5px;
+        }
+        .markdown-body pre {
+          background: #f4f4f5;
+          padding: 12px;
+          border-radius: 8px;
+          overflow-x: auto;
+          font-family: monospace;
+          font-size: 12.5px;
+          margin-top: 0;
+          margin-bottom: 12px;
+        }
+        .markdown-body strong { font-weight: 700; }
+        .markdown-body em { font-style: italic; }
         @media print {
           body { padding: 20px; }
         }
@@ -174,29 +247,7 @@ function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string) {
           <strong>Total Messages:</strong> ${chatHistory.length}
         </div>
       </div>
-      ${chatHistory
-        .map(
-          (e, idx) => `
-        <div class="message-card">
-          <div class="question-box">Q${idx + 1}: ${escapeHtml(e.question)}</div>
-          <div class="answer-box">
-            ${escapeHtml(e.answer)}
-            ${e.modelUsed ? `<div class="model-tag">Model: ${escapeHtml(e.modelUsed)}</div>` : ""}
-            ${
-              e.sources && e.sources.length
-                ? `
-              <div class="citations-box">
-                <div class="citations-title">Document Citations:</div>
-                ${e.sources.map((s) => `<div class="citation-item">• ${escapeHtml(s)}</div>`).join("")}
-              </div>
-            `
-                : ""
-            }
-          </div>
-        </div>
-      `,
-        )
-        .join("")}
+      ${itemsHtmlArray.join("")}
       <script>
         window.onload = function() {
           window.print();
@@ -366,38 +417,52 @@ export function ChatContainer() {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="w-full max-w-7xl mx-auto p-4 sm:p-6 space-y-6"
+    >
       {/* Top Session / Local Index Storage Info Banner */}
-      {showBanner && (
-        <GlassCard padding="sm" className="border-blue-500/30 bg-blue-500/10 dark:bg-blue-950/20">
-          <div className="flex items-start justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
-              <HardDrive className="w-4 h-4 shrink-0" />
-              <span>
-                <strong>Session Isolation:</strong> Each browser tab uses an isolated FAISS vector index. In-memory sessions stay active for {SESSION_INDEX_RETENTION_DAYS} days.
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                setShowBanner(false);
-                savePreference(prefKeys.DISMISSED_LOCAL_BANNER, true);
-              }}
-              className="p-1 hover:bg-blue-500/20 rounded transition-colors text-blue-600 dark:text-blue-400"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </GlassCard>
-      )}
+      <AnimatePresence>
+        {showBanner && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+            animate={{ opacity: 1, height: "auto", marginBottom: 24 }}
+            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+            className="overflow-hidden"
+          >
+            <GlassCard padding="sm" className="border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20">
+              <div className="flex items-start justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                  <HardDrive className="w-4 h-4 shrink-0" />
+                  <span>
+                    <strong>Session Isolation:</strong> Each browser tab uses an isolated FAISS vector index. In-memory sessions stay active for {SESSION_INDEX_RETENTION_DAYS} days.
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowBanner(false);
+                    savePreference(prefKeys.DISMISSED_LOCAL_BANNER, true);
+                  }}
+                  className="p-1 hover:bg-amber-500/20 rounded transition-colors text-amber-600 dark:text-amber-400"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </GlassCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Grid: Left Control Panel (4 cols) | Right Chat View (8 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Sidebar: PDF Upload & Model Controls */}
         <div className="lg:col-span-4 space-y-4">
-          <GlassCard padding="default" className="space-y-4">
+          <GlassCard padding="default" className="space-y-4 shadow-warm-sm border-stone-200 dark:border-stone-800">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <FileText className="w-4 h-4 text-zinc-500" />
+              <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-stone-500" />
                 Document Upload
               </h2>
               {isLoaded && (
@@ -422,14 +487,14 @@ export function ChatContainer() {
           </GlassCard>
 
           {/* Knowledge Mode & Execution Controls */}
-          <GlassCard padding="default" className="space-y-4">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          <GlassCard padding="default" className="space-y-4 shadow-warm-sm border-stone-200 dark:border-stone-800">
+            <h2 className="text-sm font-semibold text-stone-900 dark:text-stone-100">
               Pipeline &amp; Brain Settings
             </h2>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5 block">
+                <label className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-1.5 block">
                   AI Model
                 </label>
                 <ModelSelector
@@ -442,14 +507,14 @@ export function ChatContainer() {
               </div>
 
               {/* Knowledge Source Mode Toggle */}
-              <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+              <div className="pt-2 border-t border-stone-200 dark:border-stone-800 space-y-2">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 flex items-center justify-between">
+                  <label className="text-xs font-medium text-stone-700 dark:text-stone-300 flex items-center justify-between">
                     <span className="flex items-center gap-1.5 font-semibold">
                       {hybridMode ? (
-                        <Brain className="w-3.5 h-3.5 text-purple-500" />
+                        <Brain className="w-3.5 h-3.5 text-orange-500" />
                       ) : (
-                        <BookOpen className="w-3.5 h-3.5 text-emerald-500" />
+                        <BookOpen className="w-3.5 h-3.5 text-lime-600" />
                       )}
                       Knowledge Source Mode
                     </span>
@@ -457,26 +522,26 @@ export function ChatContainer() {
                       className={cn(
                         "text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold border transition-colors",
                         hybridMode
-                          ? "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-300/40 dark:border-purple-800/60"
-                          : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300/40 dark:border-emerald-800/60",
+                          ? "bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800/60"
+                          : "bg-lime-50 dark:bg-lime-950/60 text-lime-700 dark:text-lime-300 border-lime-200 dark:border-lime-800/60",
                       )}
                     >
                       {hybridMode ? "Hybrid Brain" : "Strict to Source"}
                     </span>
                   </label>
 
-                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800">
+                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-stone-100 dark:bg-stone-900 rounded-lg border border-stone-200 dark:border-stone-800">
                     <button
                       type="button"
                       onClick={() => setHybridMode(true)}
                       className={cn(
                         "flex items-center justify-center gap-1 py-1.5 px-2 rounded-md text-[11px] font-medium transition-all cursor-pointer",
                         hybridMode
-                          ? "bg-white dark:bg-zinc-800 text-purple-700 dark:text-purple-300 shadow-sm border border-purple-200 dark:border-purple-800/50 font-bold"
-                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200",
+                          ? "bg-white dark:bg-stone-800 text-orange-700 dark:text-orange-300 shadow-sm border border-orange-200 dark:border-orange-800/50 font-bold"
+                          : "text-stone-500 hover:text-stone-900 dark:hover:text-stone-200",
                       )}
                     >
-                      <Brain className="w-3 h-3 text-purple-500" />
+                      <Brain className="w-3 h-3 text-orange-500" />
                       <span>Hybrid Brain</span>
                     </button>
                     <button
@@ -485,39 +550,39 @@ export function ChatContainer() {
                       className={cn(
                         "flex items-center justify-center gap-1 py-1.5 px-2 rounded-md text-[11px] font-medium transition-all cursor-pointer",
                         !hybridMode
-                          ? "bg-white dark:bg-zinc-800 text-emerald-700 dark:text-emerald-300 shadow-sm border border-emerald-200 dark:border-emerald-800/50 font-bold"
-                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200",
+                          ? "bg-white dark:bg-stone-800 text-lime-700 dark:text-lime-300 shadow-sm border border-lime-200 dark:border-lime-800/50 font-bold"
+                          : "text-stone-500 hover:text-stone-900 dark:hover:text-stone-200",
                       )}
                     >
-                      <BookOpen className="w-3 h-3 text-emerald-500" />
+                      <BookOpen className="w-3 h-3 text-lime-600" />
                       <span>Strict to Source</span>
                     </button>
                   </div>
-                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight">
+                  <p className="text-[10px] text-stone-500 dark:text-stone-400 leading-tight">
                     {hybridMode
                       ? "Combines PDF citations with pretrained AI world knowledge."
                       : "Answers strictly using only the uploaded PDF document text."}
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                <div className="pt-2 border-t border-stone-200 dark:border-stone-800 space-y-2">
                   <label className="flex items-center justify-between text-xs cursor-pointer">
-                    <span className="text-zinc-600 dark:text-zinc-400">Stream Token Responses</span>
+                    <span className="text-stone-600 dark:text-stone-400">Stream Token Responses</span>
                     <input
                       type="checkbox"
                       checked={useStreaming}
                       onChange={(e) => setUseStreaming(e.target.checked)}
-                      className="rounded border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-0"
+                      className="rounded border-stone-300 dark:border-stone-700 text-amber-500 focus:ring-amber-500/50"
                     />
                   </label>
 
                   <label className="flex items-center justify-between text-xs cursor-pointer">
-                    <span className="text-zinc-600 dark:text-zinc-400">Include Citation Sources</span>
+                    <span className="text-stone-600 dark:text-stone-400">Include Citation Sources</span>
                     <input
                       type="checkbox"
                       checked={includeSources}
                       onChange={(e) => setIncludeSources(e.target.checked)}
-                      className="rounded border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:ring-0"
+                      className="rounded border-stone-300 dark:border-stone-700 text-amber-500 focus:ring-amber-500/50"
                     />
                   </label>
                 </div>
@@ -527,13 +592,13 @@ export function ChatContainer() {
 
           {/* Saved Sessions Drawer Button */}
           {sessions.length > 0 && (
-            <GlassCard padding="sm" className="flex items-center justify-between">
+            <GlassCard padding="sm" className="flex items-center justify-between shadow-warm-sm border-stone-200 dark:border-stone-800">
               <button
                 onClick={() => setShowSessions((p) => !p)}
-                className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors w-full justify-between"
+                className="flex items-center gap-2 text-xs font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 transition-colors w-full justify-between"
               >
                 <span className="flex items-center gap-2">
-                  <History className="w-4 h-4 text-zinc-500" />
+                  <History className="w-4 h-4 text-stone-500" />
                   Saved Sessions ({sessions.length})
                 </span>
                 <Badge variant="outline" size="sm">{showSessions ? "Hide" : "Show"}</Badge>
@@ -549,9 +614,9 @@ export function ChatContainer() {
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
               >
-                <GlassCard padding="sm" className="space-y-2">
-                  <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
-                    <span className="text-xs font-semibold text-zinc-500">History</span>
+                <GlassCard padding="sm" className="space-y-2 shadow-warm-sm border-stone-200 dark:border-stone-800">
+                  <div className="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-stone-800">
+                    <span className="text-xs font-semibold text-stone-500">History</span>
                     <button
                       onClick={() => setClearAllOpen(true)}
                       className="text-xs text-red-500 hover:underline cursor-pointer"
@@ -566,20 +631,20 @@ export function ChatContainer() {
                         className={cn(
                           "flex items-center justify-between p-2 rounded-lg text-xs transition-colors cursor-pointer",
                           s.pdfName === (activeSessionName ?? fileName)
-                            ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium"
-                            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50",
+                            ? "bg-stone-100 dark:bg-stone-800 text-stone-900 dark:text-stone-100 font-medium"
+                            : "text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800/50",
                         )}
                         onClick={() => handleRestoreSession(s)}
                       >
                         <span className="truncate flex-1">{s.pdfName}</span>
                         <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                          <span className="text-[10px] text-zinc-400">{s.entries.length} msgs</span>
+                          <span className="text-[10px] text-stone-400">{s.entries.length} msgs</span>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setSessionToDelete(s.pdfName);
                             }}
-                            className="p-1 text-zinc-400 hover:text-red-500 rounded"
+                            className="p-1 text-stone-400 hover:text-red-500 rounded"
                           >
                             <Trash2 className="w-3 h-3" />
                           </button>
@@ -594,12 +659,12 @@ export function ChatContainer() {
         </div>
 
         {/* Right Panel / Main Chat Stream */}
-        <div className="lg:col-span-8 flex flex-col h-[75vh] min-h-[500px] rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm">
+        <div className="lg:col-span-8 flex flex-col h-[75vh] min-h-[500px] rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 overflow-hidden shadow-warm-sm">
           {/* Chat Top Header Toolbar */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-950/50">
             <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-zinc-500" />
-              <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+              <MessageSquare className="w-4 h-4 text-stone-500" />
+              <span className="text-xs font-semibold text-stone-900 dark:text-stone-100">
                 {activeSessionName ? activeSessionName : "Interactive Chat"}
               </span>
             </div>
@@ -619,41 +684,48 @@ export function ChatContainer() {
                     onClick={() => setShowExportMenu((p) => !p)}
                     className="text-xs h-8 cursor-pointer"
                   >
-                    <Download className="w-3.5 h-3.5 mr-1 text-zinc-500" />
+                    <Download className="w-3.5 h-3.5 mr-1 text-stone-500" />
                     Export Chat
                   </Button>
 
                   {/* Export Dropdown Menu */}
-                  {showExportMenu && (
-                    <div className="absolute right-0 mt-1 w-44 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg p-1.5 z-50 text-xs space-y-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowExportMenu(false);
-                          exportAsTXT(chatHistory, activeSessionName || fileName || undefined);
-                        }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium transition-colors cursor-pointer text-left"
+                  <AnimatePresence>
+                    {showExportMenu && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        className="absolute right-0 mt-1 w-44 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-lg p-1.5 z-50 text-xs space-y-1"
                       >
-                        <FileType className="w-3.5 h-3.5 text-blue-500" />
-                        Export as Text (.txt)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowExportMenu(false);
-                          exportAsPDF(chatHistory, activeSessionName || fileName || undefined);
-                        }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium transition-colors cursor-pointer text-left"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-red-500" />
-                        Export as PDF (.pdf)
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowExportMenu(false);
+                            exportAsTXT(chatHistory, activeSessionName || fileName || undefined);
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 font-medium transition-colors cursor-pointer text-left"
+                        >
+                          <FileType className="w-3.5 h-3.5 text-amber-500" />
+                          Export as Text (.txt)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowExportMenu(false);
+                            exportAsPDF(chatHistory, activeSessionName || fileName || undefined);
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 font-medium transition-colors cursor-pointer text-left"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-red-500" />
+                          Export as PDF (.pdf)
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
               {chatHistory.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={clearHistory} className="text-xs text-zinc-500 h-8">
+                <Button variant="ghost" size="sm" onClick={clearHistory} className="text-xs text-stone-500 h-8">
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               )}
@@ -666,15 +738,20 @@ export function ChatContainer() {
             className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6"
           >
             {chatHistory.length === 0 && !streamingAnswer && !isLoading ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-6">
-                <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 shadow-xs">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="h-full flex flex-col items-center justify-center text-center p-6 space-y-6"
+              >
+                <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-500 border border-amber-200 dark:border-amber-800/40 shadow-xs">
                   <Sparkles className="w-6 h-6" />
                 </div>
                 <div className="max-w-md space-y-1">
-                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">
                     {isLoaded ? "The RAG pipeline is ready for your questions" : "Ready for Document Analysis"}
                   </h3>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
                     {isLoaded
                       ? "Click any suggested question below or type your custom query to analyze this document with context citations."
                       : "Upload a PDF document on the left sidebar to start chatting."}
@@ -691,27 +768,30 @@ export function ChatContainer() {
                     ].map((item, i) => {
                       const IconComponent = item.icon;
                       return (
-                        <button
+                        <motion.button
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.1, duration: 0.3 }}
                           key={i}
                           type="button"
                           onClick={() => handleSendMessage(item.prompt)}
-                          className="flex flex-col items-start p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-all text-left group shadow-xs cursor-pointer"
+                          className="flex flex-col items-start p-3 rounded-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 hover:border-amber-200 dark:hover:border-amber-700 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-all text-left group shadow-xs cursor-pointer"
                         >
                           <div className="flex items-center gap-2 mb-1">
-                            <IconComponent className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                            <IconComponent className="w-4 h-4 text-amber-600 dark:text-amber-500" />
+                            <span className="text-xs font-semibold text-stone-900 dark:text-stone-100 group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">
                               {item.title}
                             </span>
                           </div>
-                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-normal">
+                          <p className="text-[11px] text-stone-500 dark:text-stone-400 line-clamp-2 leading-normal">
                             {item.prompt}
                           </p>
-                        </button>
+                        </motion.button>
                       );
                     })}
                   </div>
                 )}
-              </div>
+              </motion.div>
             ) : (
               <>
                 {chatHistory.map((entry, idx) => (
@@ -727,7 +807,7 @@ export function ChatContainer() {
                   </React.Fragment>
                 ))}
 
-                {streamingAnswer !== null && (
+                {streamingAnswer !== null && streamingAnswer.length > 0 && (
                   <ChatMessage
                     role="assistant"
                     content={streamingAnswer}
@@ -735,7 +815,7 @@ export function ChatContainer() {
                   />
                 )}
 
-                {isLoading && streamingAnswer === null && (
+                {isLoading && (!streamingAnswer || streamingAnswer.length === 0) && (
                   <TypingIndicator statusMessage={statusMessage ?? undefined} />
                 )}
 
@@ -754,7 +834,7 @@ export function ChatContainer() {
           </div>
 
           {/* Bottom Chat Input Form */}
-          <div className="p-3 sm:p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50">
+          <div className="p-3 sm:p-4 border-t border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-950/50">
             <ChatInput
               onSend={handleSendMessage}
               disabled={!isLoaded || isLoading}
@@ -788,6 +868,6 @@ export function ChatContainer() {
           if (sessionToDelete) handleDeleteSession(sessionToDelete);
         }}
       />
-    </div>
+    </motion.div>
   );
 }
