@@ -201,8 +201,10 @@ DocumentRAG is built with **Smart Zero-Config Defaults**. You do **not** need to
    - `MAX_VECTOR_SESSIONS`: Defaults to `64`.
    - `FAISS_SESSION_MAX_AGE_DAYS`: Defaults to `3`.
    - `RATE_LIMIT_UPLOAD_PER_MINUTE`: Defaults to `8`.
-   - `RATE_LIMIT_ASK_PER_MINUTE`: Defaults to `90`.
-3. **Optional Overrides**: If you want to customize any of these values, you can set them in your environment variables. Otherwise, leave them unset and the system handles them automatically.
+3. **Dynamic Local Backend Port Resolution (`?port=`)**:
+   - In local development, passing a `?port=` or `?api_port=` query parameter in the browser URL (e.g. `http://localhost:5173/?port=7860`) automatically configures the API base URL to target `http://localhost:7860`.
+   - The detected port is automatically stored in `sessionStorage` (`APP_PORT`) so client-side SPA routing across pages seamlessly retains the custom backend port.
+4. **Optional Overrides & Cloud Deployments**: If you want to set a fixed backend URL for cloud deployments (Vercel, Cloudflare, Docker), configure `VITE_API_BASE_URL`. If unset and no query parameter is present, the frontend defaults to `http://${hostname || "localhost"}:8000`.
 
 ---
 
@@ -472,8 +474,13 @@ RATE_LIMIT_ASK_PER_MINUTE=90
 
 ### Frontend Environment Reference (`frontend/.env`)
 ```env
+# Optional for Cloud Deployments (Vercel, Cloudflare, Docker):
 VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
+
+> [!TIP]
+> **Dynamic Port Support (`?port=`)**:
+> During local development, you can open the frontend on any port with a `?port=` or `?api_port=` query parameter (e.g. `http://localhost:5173/?port=7860`). The frontend automatically targets `http://localhost:7860` and persists the port in `sessionStorage` (`APP_PORT`) across SPA page navigations.
 
 ---
 

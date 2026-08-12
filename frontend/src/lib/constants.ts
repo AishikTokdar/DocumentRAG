@@ -3,9 +3,9 @@
  */
 
 /**
- * API base URL — from VITE_API_BASE_URL (see `src/lib/env.ts`)
+ * API base URL resolution (see `src/lib/env.ts`)
  */
-export { API_BASE_URL, joinApiUrl } from "./env";
+export { API_BASE_URL, resolveApiBaseUrl, joinApiUrl } from "./env";
 
 /**
  * API Endpoints

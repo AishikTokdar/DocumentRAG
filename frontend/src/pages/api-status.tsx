@@ -14,7 +14,7 @@ import { GlassCard, GlassCardContent } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { fetchRuntimeSummary } from "@/lib/api";
-import { API_BASE_URL, joinApiUrl } from "@/lib/constants";
+import { resolveApiBaseUrl, joinApiUrl } from "@/lib/constants";
 import type { RuntimeSummary } from "@/types";
 
 export function ApiStatusPage() {
@@ -58,7 +58,7 @@ export function ApiStatusPage() {
               </h1>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-              Base URL: {API_BASE_URL}
+              Base URL: {resolveApiBaseUrl()}
             </p>
           </div>
 
