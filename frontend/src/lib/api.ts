@@ -216,6 +216,13 @@ export const api = {
     return this.uploadPDFs([file]);
   },
 
+  async deleteSession(): Promise<{ status: string; session_id: string; purged: boolean }> {
+    return fetchWithErrorHandling<{ status: string; session_id: string; purged: boolean }>(
+      joinApiUrl(API_ENDPOINTS.DELETE_SESSION),
+      { method: "DELETE" },
+    );
+  },
+
   async askQuestion(
     question: string,
     model?: string,

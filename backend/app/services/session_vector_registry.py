@@ -69,3 +69,22 @@ class SessionVectorRegistry:
             svc = VectorStoreService(session_id=sid)
             self._stores[sid] = svc
             return svc
+
+    def delete_session(self, session_id: str) -> bool:
+        """Purge vector store instance and disk persistence for session_id."""
+        sid = session_id.strip()
+        if not is_valid_session_id(sid):
+            return False
+
+        with self._lock:
+            if sid in self._stores:
+                svc = self._stores.pop(sid)
+                svc.clear()
+            path = VectorStoreService.disk_path_for_session(sid)
+            try:
+                shutil.rmtree(path, ignore_errors=True)
+                logger.info("Purged vector session index %s", sid)
+                return True
+            except OSError as exc:
+                logger.warning("Could not remove session index %s: %s", path, exc)
+                return False

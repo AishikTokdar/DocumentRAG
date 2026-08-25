@@ -131,6 +131,7 @@ class AgentPipeline:
         question: str,
         model: str | None = None,
         include_sources: bool = False,
+        hybrid_mode: bool = True,
     ) -> PipelineResult:
         """
         Execute the full 7-step pipeline for a user question.
@@ -139,6 +140,7 @@ class AgentPipeline:
             question:        The user's natural-language question.
             model:           Optional model id override.
             include_sources: Attach page-level source citations.
+            hybrid_mode:     Use Hybrid RAG synthesis vs Strict mode.
 
         Returns:
             PipelineResult with answer, metadata, and telemetry.
@@ -147,6 +149,7 @@ class AgentPipeline:
             "question": question,
             "model": model,
             "include_sources": include_sources,
+            "hybrid_mode": hybrid_mode,
             "retrieval_k": self.retrieval_k,
         }
         results: list[AgentResult] = []

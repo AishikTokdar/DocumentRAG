@@ -47,43 +47,45 @@ import { marked } from "marked";
 
 const DEFAULT_CHAT_MODEL_ID = "gemini-3.5-flash";
 
-function exportAsTXT(chatHistory: ChatEntry[], activeSessionName?: string) {
+async function exportAsTXT(chatHistory: ChatEntry[], activeSessionName?: string) {
   if (chatHistory.length === 0) return;
   
-  const stripMarkdown = (md: string) => {
-    return md
-      .replace(/\*\*(.*?)\*\*/g, "$1")
-      .replace(/(?<!\*)\*(?!\*)(.*?)\*/g, "$1") // single asterisk
-      .replace(/`(.*?)`/g, "$1")
-      .replace(/^#+\s+(.*)$/gm, "$1")
-      .replace(/\[(.*?)\]\(.*?\)/g, "$1");
-  };
-
   const header = `==================================================\nDocumentRAG Conversation Export\nDocument: ${activeSessionName || "Indexed PDF"}\nExported Date: ${new Date().toLocaleString()}\n==================================================\n\n`;
-  const body = chatHistory
-    .map((e, idx) => {
-      let text = `[Question ${idx + 1}]\n${e.question}\n\n[Answer]\n${stripMarkdown(e.answer)}\n`;
-      if (e.modelUsed) text += `Model Used: ${e.modelUsed}\n`;
-      if (e.sources && e.sources.length) {
-        text += `Citations:\n` + e.sources.map((s) => `  - ${s}`).join("\n") + "\n";
-      }
-      return text + "\n--------------------------------------------------\n";
-    })
-    .join("\n");
+  
+  const bodyTextPromises = chatHistory.map(async (e, idx) => {
+    // Parse markdown to HTML to completely resolve all formatting (bold, italics, headers)
+    const parsedAnswer = await Promise.resolve(marked.parse(e.answer));
+    
+    // Create a temporary DOM element to extract clean text (respecting block spacing)
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = parsedAnswer;
+    const plainTextAnswer = tempDiv.innerText || tempDiv.textContent || "";
+
+    let text = `[Question ${idx + 1}]\n${e.question}\n\n[Answer]\n${plainTextAnswer}\n`;
+    if (e.modelUsed) text += `\nModel Used: ${e.modelUsed}\n`;
+    if (e.sources && e.sources.length) {
+      text += `Citations:\n` + e.sources.map((s) => `  - ${s}`).join("\n") + "\n";
+    }
+    return text + "\n--------------------------------------------------\n";
+  });
+
+  const bodyTexts = await Promise.all(bodyTextPromises);
+  const body = bodyTexts.join("\n");
 
   const blob = new Blob([header + body], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `chat_export_${(activeSessionName || "document").replace(/[^a-z0-9]/gi, "_").toLowerCase()}.txt`;
+  a.download = `${(activeSessionName || "Conversation").replace(/[^a-z0-9]/gi, "_").toLowerCase()}_report.txt`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
+// @ts-ignore
+import html2pdf from "html2pdf.js";
+
 async function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string) {
   if (chatHistory.length === 0) return;
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
 
   const escapeHtml = (str: string) =>
     str
@@ -95,7 +97,6 @@ async function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string)
 
   const itemsHtmlArray = await Promise.all(
     chatHistory.map(async (e, idx) => {
-      // marked.parse can be async depending on extensions, wrapping in Promise.resolve is safe
       const parsedAnswer = await Promise.resolve(marked.parse(e.answer));
       return `
         <div class="message-card">
@@ -119,20 +120,15 @@ async function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string)
     })
   );
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8" />
-      <title>DocumentRAG Export - ${escapeHtml(activeSessionName || "Conversation")}</title>
+  const container = document.createElement("div");
+  container.innerHTML = `
+    <div id="pdf-export-container">
       <style>
-        body {
+        #pdf-export-container {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           line-height: 1.6;
           color: #18181b;
-          padding: 40px;
-          max-width: 800px;
-          margin: 0 auto;
+          padding: 20px 40px;
           background: #ffffff;
         }
         .header {
@@ -200,6 +196,7 @@ async function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string)
         .markdown-body {
           font-family: inherit;
         }
+        .markdown-body a { color: #2563eb; text-decoration: underline; }
         .markdown-body p { margin-top: 0; margin-bottom: 12px; }
         .markdown-body p:last-child { margin-bottom: 0; }
         .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
@@ -233,12 +230,7 @@ async function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string)
         }
         .markdown-body strong { font-weight: 700; }
         .markdown-body em { font-style: italic; }
-        @media print {
-          body { padding: 20px; }
-        }
       </style>
-    </head>
-    <body>
       <div class="header">
         <h1>DocumentRAG Conversation Transcript</h1>
         <div class="meta">
@@ -248,16 +240,54 @@ async function exportAsPDF(chatHistory: ChatEntry[], activeSessionName?: string)
         </div>
       </div>
       ${itemsHtmlArray.join("")}
-      <script>
-        window.onload = function() {
-          window.print();
-        };
-      </script>
-    </body>
-    </html>
+    </div>
   `;
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
+
+  document.body.appendChild(container);
+  // hide it visually but keep it in DOM for rendering
+  container.style.position = "absolute";
+  container.style.left = "-9999px";
+
+  const targetElement = (container.firstElementChild || container) as HTMLElement;
+
+  const opt = {
+    margin: [10, 10, 20, 10] as [number, number, number, number],
+    filename: `${activeSessionName || "Conversation"}_report.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+    enableLinks: true
+  };
+
+  try {
+    const pdfWorker = (html2pdf as any)()
+      .from(targetElement)
+      .set(opt)
+      .toPdf()
+      .get('pdf')
+      .then((pdf: any) => {
+        const totalPages = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          pdf.setPage(i);
+          pdf.setFontSize(10);
+          pdf.setTextColor(150);
+          pdf.text(
+            `Page ${i} of ${totalPages}`,
+            pdf.internal.pageSize.getWidth() - 30,
+            pdf.internal.pageSize.getHeight() - 10
+          );
+        }
+      });
+
+    await pdfWorker.save();
+  } catch (err: any) {
+    console.error("PDF Export failed:", err);
+  } finally {
+    if (container.parentNode) {
+      document.body.removeChild(container);
+    }
+  }
 }
 
 export function ChatContainer() {

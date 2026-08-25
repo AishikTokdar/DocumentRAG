@@ -221,6 +221,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
   const resetPDF = React.useCallback(() => {
     abortRef.current?.abort();
     streamGenerationRef.current += 1;
+    api.deleteSession().catch(() => {});
     setState(initialState);
   }, []);
 

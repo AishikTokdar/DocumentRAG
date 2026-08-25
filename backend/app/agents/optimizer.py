@@ -81,10 +81,31 @@ class OptimizerAgent(BaseAgent):
         Returns:
             ``(question, optimised_chunks)``
         """
+    def process(
+        self,
+        input_data: tuple[str, list[Document]],
+        context: dict[str, Any],
+    ) -> tuple[str, list[Document]]:
+        """
+        Optimise chunks for the Synthesizer.
+
+        Args:
+            input_data: ``(question, preprocessed_chunks)``
+            context:    Shared pipeline context dict.
+
+        Returns:
+            ``(question, optimised_chunks)``
+        """
         question, chunks = input_data
 
-        # Sort by estimated relevance (best first)
-        ranked = sorted(chunks, key=self._relevance_score, reverse=True)
+        # Sort by relevance preserving FAISS nearest-neighbor rank order as primary weight
+        indexed = list(enumerate(chunks))
+        indexed_ranked = sorted(
+            indexed,
+            key=lambda item: (1.0 - (item[0] * 0.05)) + min(len(item[1].page_content) / 2000.0, 0.1),
+            reverse=True,
+        )
+        ranked = [doc for _, doc in indexed_ranked]
 
         # Trim to token budget
         fitted = self._fit_budget(ranked)

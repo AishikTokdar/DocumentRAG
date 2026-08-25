@@ -222,6 +222,9 @@ class VectorStoreService:
 
     def create_from_documents(self, documents: list[Document]) -> int:
         """Create vector store from document chunks and persist to disk."""
+        if not documents:
+            raise ValueError("Cannot create vector store from empty document list.")
+            
         gc.collect()
         candidates = self._embedding_candidates()
 
@@ -276,6 +279,35 @@ class VectorStoreService:
             raise ValueError("Vector store not initialized. Upload a PDF first.")
         k = k or self.settings.retrieval_k
         return self.vectorstore.similarity_search(query, k=k)
+
+    def get_balanced_documents(
+        self,
+        query: str,
+        top_k_per_paper: int = 2,
+        max_total_docs: int = 6,
+    ) -> list[Document]:
+        """
+        Retrieves context chunks ensuring every indexed paper contributes equally
+        rather than letting a single dominant paper monopolize results.
+        """
+        if self.vectorstore is None:
+            raise ValueError("Vector store not initialized. Upload a PDF first.")
+
+        candidate_pool = self.vectorstore.similarity_search(query, k=50)
+        paper_docs_map: dict[str, list[Document]] = {}
+
+        for doc in candidate_pool:
+            title = doc.metadata.get("source_file") or doc.metadata.get("file_name") or "Document"
+            if title not in paper_docs_map:
+                paper_docs_map[title] = []
+            if len(paper_docs_map[title]) < top_k_per_paper:
+                paper_docs_map[title].append(doc)
+
+        balanced_docs: list[Document] = []
+        for docs in paper_docs_map.values():
+            balanced_docs.extend(docs)
+
+        return balanced_docs[:max_total_docs]
 
     def get_retriever(self, k: int | None = None):
         """Get a retriever for use in chains."""

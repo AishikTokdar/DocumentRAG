@@ -14,10 +14,17 @@ export interface ChatMessageProps {
 }
 
 function parseInlineMarkdown(text: string): React.ReactNode[] {
-  const regex = /(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g;
+  const regex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g;
   const tokens = text.split(regex);
 
   return tokens.map((token, idx) => {
+    if (token.startsWith("***") && token.endsWith("***") && token.length > 6) {
+      return (
+        <strong key={idx} className="font-bold italic text-stone-900 dark:text-stone-100">
+          {token.slice(3, -3)}
+        </strong>
+      );
+    }
     if (token.startsWith("**") && token.endsWith("**") && token.length > 4) {
       return (
         <strong key={idx} className="font-bold text-stone-900 dark:text-stone-100">
@@ -43,13 +50,15 @@ function parseInlineMarkdown(text: string): React.ReactNode[] {
 }
 
 function renderFormattedInlineText(text: string) {
-  // Catch document citations in brackets: [Filename.pdf - Page 23] or [Page X, Chunk Y]
-  const citationRegex = /(\[(?:[^\]]+\.(?:pdf|doc|docx|txt)\s*-\s*Page\s*\d+[^\]]*|Page\s*\d+[^\]]*)\])/gi;
+  // Catch document citations in brackets: [Source: Filename - Page X] or [Filename - Page X] or [Page X]
+  const citationRegex = /(\[(?:(?:Source:\s*)?[^\]]+\s*-\s*Page\s*\d+[^\]]*|Page\s*\d+[^\]]*)\])/gi;
   const parts = text.split(citationRegex);
 
   return parts.map((part, i) => {
     if (citationRegex.test(part)) {
-      const cleanCitation = part.slice(1, -1).trim();
+      let cleanCitation = part.slice(1, -1).trim();
+      // Strip any hallucinated chunk numbers (e.g., ", Chunk 2 & 3")
+      cleanCitation = cleanCitation.replace(/,\s*Chunk.*$/i, "");
       return (
         <span
           key={i}
@@ -101,11 +110,45 @@ export function FormattedMessageContent({ content }: { content: string }) {
       return;
     }
 
-    // Header 1, 2, 3
+    // Horizontal rules
+    if (trimmed === "---" || trimmed === "***") {
+      flushList(`list-${index}`);
+      elements.push(<hr key={`hr-${index}`} className="my-4 border-stone-200 dark:border-stone-800" />);
+      return;
+    }
+
+    // Headers
+    if (trimmed.startsWith("###### ")) {
+      flushList(`list-${index}`);
+      elements.push(
+        <h6 key={`h6-${index}`} className="text-xs font-bold text-stone-900 dark:text-stone-100 mt-2 mb-1 tracking-tight">
+          {renderFormattedInlineText(trimmed.slice(7))}
+        </h6>
+      );
+      return;
+    }
+    if (trimmed.startsWith("##### ")) {
+      flushList(`list-${index}`);
+      elements.push(
+        <h5 key={`h5-${index}`} className="text-sm font-bold text-stone-900 dark:text-stone-100 mt-2 mb-1 tracking-tight">
+          {renderFormattedInlineText(trimmed.slice(6))}
+        </h5>
+      );
+      return;
+    }
+    if (trimmed.startsWith("#### ")) {
+      flushList(`list-${index}`);
+      elements.push(
+        <h4 key={`h4-${index}`} className="text-sm font-bold text-stone-900 dark:text-stone-100 mt-3 mb-1 tracking-tight">
+          {renderFormattedInlineText(trimmed.slice(5))}
+        </h4>
+      );
+      return;
+    }
     if (trimmed.startsWith("### ")) {
       flushList(`list-${index}`);
       elements.push(
-        <h3 key={`h3-${index}`} className="text-sm font-bold text-stone-900 dark:text-stone-100 mt-3 mb-1.5 tracking-tight">
+        <h3 key={`h3-${index}`} className="text-base font-bold text-stone-900 dark:text-stone-100 mt-3 mb-1.5 tracking-tight">
           {renderFormattedInlineText(trimmed.slice(4))}
         </h3>
       );

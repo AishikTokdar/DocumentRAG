@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
   HEALTH: "/",
   STATUS: "/status",
   UPLOAD: "/upload",
+  DELETE_SESSION: "/session",
   ASK: "/ask",
   ASK_STREAM: "/ask/stream",
   MODELS: "/models",

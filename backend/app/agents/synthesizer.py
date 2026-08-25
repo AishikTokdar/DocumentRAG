@@ -55,13 +55,15 @@ class SynthesizerAgent(BaseAgent):
         """
         question, chunks = input_data
         model = context.get("model")
+        hybrid_mode = context.get("hybrid_mode", True)
         
-        # LLMService handles provider/model failover internally; this agent only
-        # passes user intent (question/model) plus retrieved context docs.
+        # LLMService handles provider/model failover internally; this agent passes
+        # user intent (question/model/hybrid_mode) plus retrieved context docs.
         answer, model_used, processing_time = self.llm_service.generate_answer(
             question=question,
             context_docs=chunks,
-            model=model
+            model=model,
+            hybrid_mode=hybrid_mode,
         )
         
         # Store metadata in context

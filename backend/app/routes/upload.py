@@ -133,6 +133,12 @@ async def upload_pdf(
                 detail=f"Error processing '{fname}': {str(e)}",
             ) from e
 
+    if not all_chunks:
+        raise HTTPException(
+            status_code=400,
+            detail="No readable text could be extracted from the uploaded PDF(s). The document might be scanned images or empty.",
+        )
+
     vector_service.create_from_documents(all_chunks)
     increment_pdf_uploads()
 
@@ -144,6 +150,18 @@ async def upload_pdf(
         files=file_metas,
         total_files=len(file_metas),
     )
+
+
+@router.delete("/session")
+async def delete_session(
+    session_id: Annotated[str, Depends(require_session_id)],
+):
+    """
+    Purge current browser session's vector store index from RAM and disk.
+    Ensures complete privacy and instant memory cleanup when resetting documents.
+    """
+    purged = get_vector_registry().delete_session(session_id)
+    return {"status": "cleared", "session_id": session_id, "purged": purged}
 
 
 @router.get("/status", response_model=StatusResponse)

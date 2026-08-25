@@ -51,20 +51,27 @@ class AssemblerAgent(BaseAgent):
         fallback_sources: list[Any],
         max_pages: int = 3,
     ) -> list[str]:
+        def format_page(raw_p: Any) -> str:
+            if isinstance(raw_p, int):
+                return f"Page {raw_p + 1}"
+            if isinstance(raw_p, str) and raw_p.isdigit():
+                return f"Page {int(raw_p) + 1}"
+            p_str = str(raw_p)
+            return p_str if p_str.startswith("Page") else f"Page {p_str}"
+
         answer_tokens = self._tokenize(answer)
         if not answer_tokens:
-            # Fallback to previously collected pages if answer has no usable tokens.
-            return list(dict.fromkeys(str(p) for p in fallback_sources))[:max_pages]
+            return list(dict.fromkeys(format_page(p) for p in fallback_sources))[:max_pages]
 
         page_scores: dict[str, float] = {}
         for doc in optimized_chunks:
-            page = str(doc.metadata.get("page", "N/A"))
+            p_formatted = format_page(doc.metadata.get("page", "N/A"))
             chunk_tokens = self._tokenize(doc.page_content)
             if not chunk_tokens:
                 continue
             overlap = len(answer_tokens.intersection(chunk_tokens))
             score = overlap / max(1, len(answer_tokens))
-            page_scores[page] = max(page_scores.get(page, 0.0), score)
+            page_scores[p_formatted] = max(page_scores.get(p_formatted, 0.0), score)
 
         ranked_pages = [
             p for p, score in sorted(page_scores.items(), key=lambda x: x[1], reverse=True) if score > 0
@@ -72,7 +79,7 @@ class AssemblerAgent(BaseAgent):
         if ranked_pages:
             return ranked_pages[:max_pages]
 
-        return list(dict.fromkeys(str(p) for p in fallback_sources))[:max_pages]
+        return list(dict.fromkeys(format_page(p) for p in fallback_sources))[:max_pages]
 
     def process(self, input_data: str, context: dict[str, Any]) -> dict[str, Any]:
         """

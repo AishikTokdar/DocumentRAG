@@ -74,6 +74,7 @@ async def ask_question(
             question=request.question,
             model=request.model,
             include_sources=request.include_sources,
+            hybrid_mode=request.hybrid_mode,
         )
 
         if not result.success:

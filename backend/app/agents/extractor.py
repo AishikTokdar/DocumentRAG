@@ -54,8 +54,7 @@ class ExtractorAgent(BaseAgent):
         question = input_data
         k = context.get("retrieval_k", self.k)  # pipeline may override k per request
         
-        # Embed the question with the *same* embedding model as the index, then FAISS nearest neighbors.
-        chunks = self.vector_service.similarity_search(question, k=k)
+        chunks = self.vector_service.get_balanced_documents(question, top_k_per_paper=2, max_total_docs=k)
         
         # Store metadata in context for later agents
         # These fields are consumed by Assembler when citations are enabled.
