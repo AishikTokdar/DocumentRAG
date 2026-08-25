@@ -94,7 +94,7 @@ export function resolveApiBaseUrl(): string {
   }
 
   // 5. Cloud deployment fallback when VITE_API_BASE_URL is not set:
-  // Return empty string (relative calls) without appending invalid :8000 ports to cloud hostnames.
+  // Return empty string (relative calls) without hardcoded third-party domain URLs.
   return "";
 }
 

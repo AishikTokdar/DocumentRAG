@@ -12,6 +12,11 @@ export default defineConfig(({ mode }) => {
     env.VITE_DEV_PROXY_TARGET?.trim() || "http://127.0.0.1:8000";
 
   return {
+    define: {
+      "import.meta.env.VITE_API_BASE_URL": JSON.stringify(
+        process.env.VITE_API_BASE_URL || env.VITE_API_BASE_URL || "",
+      ),
+    },
     plugins: [react()],
     resolve: {
       alias: {

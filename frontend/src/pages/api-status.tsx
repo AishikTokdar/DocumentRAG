@@ -58,7 +58,7 @@ export function ApiStatusPage() {
               </h1>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-              Base URL: {resolveApiBaseUrl()}
+              Base URL: {resolveApiBaseUrl() || "(Relative / Same-Origin)"}
             </p>
           </div>
 
@@ -85,6 +85,9 @@ export function ApiStatusPage() {
         {err && (
           <GlassCard padding="default" className="mb-6 border-red-500/50 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300">
             <p className="text-sm font-medium">Failed to connect to backend: {err}</p>
+            <p className="text-xs mt-1 opacity-80">
+              Ensure <code className="font-mono bg-red-100 dark:bg-red-900/40 px-1 rounded">VITE_API_BASE_URL</code> is set in your Cloudflare Pages / Vercel environment variables, or pass <code className="font-mono bg-red-100 dark:bg-red-900/40 px-1 rounded">?api_url=YOUR_BACKEND_URL</code> in the browser address bar.
+            </p>
           </GlassCard>
         )}
 

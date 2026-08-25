@@ -11,6 +11,9 @@ export default defineConfig(function (_a) {
     var env = loadEnv(mode, process.cwd(), "");
     var proxyTarget = ((_b = env.VITE_DEV_PROXY_TARGET) === null || _b === void 0 ? void 0 : _b.trim()) || "http://127.0.0.1:8000";
     return {
+        define: {
+            "import.meta.env.VITE_API_BASE_URL": JSON.stringify(process.env.VITE_API_BASE_URL || env.VITE_API_BASE_URL || ""),
+        },
         plugins: [react()],
         resolve: {
             alias: {

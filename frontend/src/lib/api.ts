@@ -251,14 +251,33 @@ export const api = {
 export async function fetchRuntimeSummary(
   options?: { signal?: AbortSignal },
 ): Promise<RuntimeSummary> {
-  const response = await fetch(joinApiUrl(API_ENDPOINTS.RUNTIME_SUMMARY), {
+  const url = joinApiUrl(API_ENDPOINTS.RUNTIME_SUMMARY);
+  const response = await fetch(url, {
     signal: options?.signal,
   });
+
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     throw new ApiError(text || `HTTP ${response.status}`, response.status);
   }
-  return response.json() as Promise<RuntimeSummary>;
+
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("text/html")) {
+    throw new ApiError(
+      "Backend endpoint returned HTML instead of JSON. Verify backend deployment URL.",
+      502,
+    );
+  }
+
+  try {
+    return (await response.json()) as RuntimeSummary;
+  } catch (err) {
+    throw new ApiError(
+      "Invalid JSON response received from backend API.",
+      502,
+      err instanceof Error ? err.message : undefined,
+    );
+  }
 }
 
 export default api;
