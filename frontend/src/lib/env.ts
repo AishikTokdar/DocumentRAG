@@ -18,7 +18,19 @@ function trimTrailingSlashes(s: string): string {
  * session storage persistence, environment variable VITE_API_BASE_URL, and fallback default.
  */
 export function resolveApiBaseUrl(): string {
-  // 1. Check for browser URL query parameter ?port= (e.g. ?port=7860) or persisted session port
+  // 1. Priority 1: Environment variable VITE_API_BASE_URL (used for Cloud deployments like Cloudflare / Vercel)
+  const raw = import.meta.env.VITE_API_BASE_URL;
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  if (trimmed) {
+    if (trimmed.startsWith("/")) {
+      const rel = trimTrailingSlashes(trimmed) || "/";
+      if (rel !== "/") return rel;
+    } else {
+      return trimTrailingSlashes(trimmed);
+    }
+  }
+
+  // 2. Priority 2: URL query parameter ?port= or ?api_port= (for dynamic local dev override)
   if (typeof window !== "undefined") {
     try {
       const search = window.location.search;
@@ -33,36 +45,21 @@ export function resolveApiBaseUrl(): string {
         }
       }
 
-      // Read persisted session port during SPA route navigation
-      const storedPort = sessionStorage.getItem("APP_PORT");
-      if (storedPort && /^\d+$/.test(storedPort.trim())) {
-        const host = window.location.hostname || "localhost";
-        return `http://${host}:${storedPort.trim()}`;
+      // Read persisted session port during local SPA route navigation (only on localhost/local IPs)
+      const host = window.location.hostname || "localhost";
+      const isLocalHost = host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.");
+      if (isLocalHost) {
+        const storedPort = sessionStorage.getItem("APP_PORT");
+        if (storedPort && /^\d+$/.test(storedPort.trim())) {
+          return `http://${host}:${storedPort.trim()}`;
+        }
       }
     } catch {
       // Ignore storage/parsing errors
     }
   }
 
-  // 2. Check environment variable VITE_API_BASE_URL (used for Cloud deployments)
-  const raw = import.meta.env.VITE_API_BASE_URL;
-  const trimmed = typeof raw === "string" ? raw.trim() : "";
-  if (trimmed) {
-    if (trimmed.startsWith("/")) {
-      const rel = trimTrailingSlashes(trimmed) || "/";
-      if (rel === "/") {
-        const defaultHost =
-          typeof window !== "undefined" && window.location.hostname
-            ? window.location.hostname
-            : "localhost";
-        return `http://${defaultHost}:8000`;
-      }
-      return rel;
-    }
-    return trimTrailingSlashes(trimmed);
-  }
-
-  // 3. Fallback to default localhost port (8000)
+  // 3. Fallback default port
   const defaultHost =
     typeof window !== "undefined" && window.location.hostname
       ? window.location.hostname
