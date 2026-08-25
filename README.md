@@ -46,9 +46,12 @@ DocumentRAG is a state-of-the-art, open-source Retrieval-Augmented Generation (R
   - **Strict to Source Mode**: Enforces strict adherence to PDF context only, stating when information is absent.
 - **Local Zero-Key Embeddings**: Uses Hugging Face `sentence-transformers/all-MiniLM-L6-v2` running on CPU for vector embeddings, requiring zero external embedding API keys.
 - **7-Stage Multi-Agent Pipeline**: Executes Extractor, Analyzer, Preprocessor, Optimizer, Synthesizer, Validator, and Assembler stages for maximum answer grounding and reliability.
-- **SSE Token Streaming**: Real-time token-by-token streaming responses over Server-Sent Events.
-- **Formatted Chat Exports**: One-click exports of full conversation history to clean `.txt` files or print-formatted `.pdf` documents.
+- **Multi-Paper Balanced Retrieval**: Automatically balances context extraction across multiple uploaded PDFs so every paper gets equal representation in RAG prompts.
+- **Dynamic Multi-Part SSE Streaming**: Real-time token-by-token streaming over Server-Sent Events with dynamic $N$-part answer splitting for large document contexts (`### Part X of N`).
+- **Direct PDF & Text Exports**: Direct download of formatted PDF reports (`[DocumentName]_report.pdf`) with page numbers, clickable links, and clean `.txt` exports.
+- **Instant Session & Memory Purging (`DELETE /session`)**: Automatically purges session FAISS vector indexes from RAM and disk when documents are reset in the UI.
 - **Anonymous Session Isolation**: Browser-side Web Crypto UUID isolation ensures per-tab vector store privacy without mandatory user logins.
+- **Dynamic Zero-Hardcoding API Base Resolution**: Supports `VITE_API_BASE_URL`, `?api_url=` query parameter, `localStorage`/`sessionStorage` overrides, and dynamic `?port=` detection for seamless local and cloud deployments.
 
 ---
 
@@ -201,10 +204,10 @@ DocumentRAG is built with **Smart Zero-Config Defaults**. You do **not** need to
    - `MAX_VECTOR_SESSIONS`: Defaults to `64`.
    - `FAISS_SESSION_MAX_AGE_DAYS`: Defaults to `3`.
    - `RATE_LIMIT_UPLOAD_PER_MINUTE`: Defaults to `8`.
-3. **Dynamic Local Backend Port Resolution (`?port=`)**:
-   - In local development, passing a `?port=` or `?api_port=` query parameter in the browser URL (e.g. `http://localhost:5173/?port=7860`) automatically configures the API base URL to target `http://localhost:7860`.
-   - The detected port is automatically stored in `sessionStorage` (`APP_PORT`) so client-side SPA routing across pages seamlessly retains the custom backend port.
-4. **Optional Overrides & Cloud Deployments**: If you want to set a fixed backend URL for cloud deployments (Vercel, Cloudflare, Docker), configure `VITE_API_BASE_URL`. If unset and no query parameter is present, the frontend defaults to `http://${hostname || "localhost"}:8000`.
+3. **Dynamic Backend API Base Resolution (`?api_url=` and `?port=`)**:
+   - In local development, passing a `?port=` query parameter in the browser URL (e.g. `http://localhost:5173/?port=7860`) automatically targets `http://localhost:7860`.
+   - On cloud deployments or custom backends, passing `?api_url=https://your-backend-domain.com` in the URL automatically sets and persists your custom API base URL in browser session storage.
+4. **Zero-Hardcoding Environment Overrides**: Configure `VITE_API_BASE_URL` in environment variables or `localStorage`. On cloud hosts (Vercel, Cloudflare, Docker), the frontend automatically uses your specified API base URL without hardcoded domain names.
 
 ---
 
@@ -507,6 +510,7 @@ All protected state endpoints accept an optional `X-Chat-Session-Id` header (UUI
 | `GET` | `/models` | List supported AI models & credential availability |
 | `GET` | `/status` | Session vector store loaded status |
 | `POST` | `/upload` | Upload PDF files (up to 3 files, combined <= 50 MB) |
+| `DELETE` | `/session` | Purge current browser session vector index from RAM and disk |
 | `POST` | `/ask` | Submit question (Non-streaming JSON response) |
 | `POST` | `/ask/stream` | Submit question (SSE real-time token streaming) |
 | `GET` | `/runtime-summary` | Provider health metrics dashboard |

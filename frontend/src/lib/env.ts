@@ -18,7 +18,47 @@ function trimTrailingSlashes(s: string): string {
  * session storage persistence, environment variable VITE_API_BASE_URL, and fallback default.
  */
 export function resolveApiBaseUrl(): string {
-  // 1. Priority 1: Environment variable VITE_API_BASE_URL (used for Cloud deployments like Cloudflare / Vercel)
+  // 1. Check browser runtime override in localStorage / sessionStorage
+  if (typeof window !== "undefined") {
+    try {
+      const storageOverride =
+        localStorage.getItem("VITE_API_BASE_URL") ||
+        sessionStorage.getItem("VITE_API_BASE_URL");
+      if (storageOverride && storageOverride.trim()) {
+        return trimTrailingSlashes(storageOverride.trim());
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  // 2. Check for URL query parameters: ?api_url= or ?api_base_url= or ?port=
+  if (typeof window !== "undefined") {
+    try {
+      const search = window.location.search;
+      if (search) {
+        const urlParams = new URLSearchParams(search);
+        const queryApiUrl = urlParams.get("api_url") || urlParams.get("api_base_url");
+        if (queryApiUrl && queryApiUrl.trim()) {
+          const cleanUrl = trimTrailingSlashes(queryApiUrl.trim());
+          sessionStorage.setItem("VITE_API_BASE_URL", cleanUrl);
+          return cleanUrl;
+        }
+
+        const queryPort = urlParams.get("port") || urlParams.get("api_port");
+        if (queryPort && /^\d+$/.test(queryPort.trim())) {
+          const port = queryPort.trim();
+          sessionStorage.setItem("APP_PORT", port);
+          const host = window.location.hostname || "localhost";
+          return `http://${host}:${port}`;
+        }
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+  }
+
+  // 3. Check build-time environment variable VITE_API_BASE_URL
   const raw = import.meta.env.VITE_API_BASE_URL;
   const trimmed = typeof raw === "string" ? raw.trim() : "";
   if (trimmed) {
@@ -30,41 +70,32 @@ export function resolveApiBaseUrl(): string {
     }
   }
 
-  // 2. Priority 2: URL query parameter ?port= or ?api_port= (for dynamic local dev override)
+  // 4. Local dev environment resolution (only append port 8000 on localhost/LAN IPs)
   if (typeof window !== "undefined") {
     try {
-      const search = window.location.search;
-      if (search) {
-        const urlParams = new URLSearchParams(search);
-        const queryPort = urlParams.get("port") || urlParams.get("api_port");
-        if (queryPort && /^\d+$/.test(queryPort.trim())) {
-          const port = queryPort.trim();
-          sessionStorage.setItem("APP_PORT", port);
-          const host = window.location.hostname || "localhost";
-          return `http://${host}:${port}`;
-        }
-      }
-
-      // Read persisted session port during local SPA route navigation (only on localhost/local IPs)
       const host = window.location.hostname || "localhost";
-      const isLocalHost = host === "localhost" || host === "127.0.0.1" || host.startsWith("192.168.") || host.startsWith("10.");
+      const isLocalHost =
+        host === "localhost" ||
+        host === "127.0.0.1" ||
+        host.startsWith("192.168.") ||
+        host.startsWith("10.") ||
+        host.endsWith(".local");
+
       if (isLocalHost) {
         const storedPort = sessionStorage.getItem("APP_PORT");
         if (storedPort && /^\d+$/.test(storedPort.trim())) {
           return `http://${host}:${storedPort.trim()}`;
         }
+        return `http://${host}:8000`;
       }
     } catch {
-      // Ignore storage/parsing errors
+      // Ignore errors
     }
   }
 
-  // 3. Fallback default port
-  const defaultHost =
-    typeof window !== "undefined" && window.location.hostname
-      ? window.location.hostname
-      : "localhost";
-  return `http://${defaultHost}:8000`;
+  // 5. Cloud deployment fallback when VITE_API_BASE_URL is not set:
+  // Return empty string (relative calls) without appending invalid :8000 ports to cloud hostnames.
+  return "";
 }
 
 /**
