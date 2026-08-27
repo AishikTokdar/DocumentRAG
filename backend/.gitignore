@@ -23,5 +23,16 @@ faiss_index/
 # Uploaded PDFs (temporary)
 uploads/
 
+# Lockfiles
+poetry.lock
+Pipfile.lock
+requirements.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+*.lock
+*.lockb
+
 # Logs
 *.log

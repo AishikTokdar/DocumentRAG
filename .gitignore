@@ -75,6 +75,21 @@ dmypy.json
 # Node.js & Frontend Build Outputs
 # ============================================================================
 node_modules/
+# Lockfiles (root, frontend, and all subdirectories)
+package-lock.json
+*/package-lock.json
+**/package-lock.json
+yarn.lock
+*/yarn.lock
+**/yarn.lock
+pnpm-lock.yaml
+*/pnpm-lock.yaml
+**/pnpm-lock.yaml
+bun.lockb
+*/bun.lockb
+**/bun.lockb
+*.lock
+*.lockb
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -86,6 +101,8 @@ dist/
 dist-ssr/
 .vite/
 *.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
 
 # ============================================================================
 # FAISS Vector Store Index & Session Files (Runtime Generated Data)
@@ -127,3 +144,4 @@ temp/
 ._*
 Thumbs.db
 desktop.ini
+.validation/
