@@ -1,0 +1,2 @@
+# Compatibility alias: the backend upload profile includes Gradio/Spaces.
+-r requirements.txt
