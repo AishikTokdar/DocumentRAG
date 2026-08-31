@@ -1,142 +1,93 @@
-"""
-PDF Processing Service
-
-Handles loading, parsing, and chunking of PDF documents.
-Uses LangChain for document loading and text splitting.
-"""
-
 import gc
+import hashlib
 import os
 import tempfile
 from dataclasses import dataclass
 
-from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from ..config import get_settings
+from .chunking import split_documents
+from .pdf_extraction import extract_pdf
 
 
 @dataclass
 class ProcessedPDF:
-    """
-    Result of PDF processing.
-    
-    Attributes:
-        chunks: List of document chunks
-        file_name: Original file name
-        total_pages: Number of pages in PDF
-        total_chunks: Number of chunks created
-    """
     chunks: list[Document]
     file_name: str
     total_pages: int
     total_chunks: int
-
+    readable_pages: int = 0
+    complete: bool = True
 
 class PDFProcessor:
-    """
-    Service for processing PDF documents.
-    
-    Handles:
-    - Loading PDF files
-    - Splitting into manageable chunks
-    - Text cleaning and preprocessing
-    
-    Usage:
-        processor = PDFProcessor()
-        result = processor.process_file(uploaded_file)
-    """
-    
-    def __init__(
-        self,
-        chunk_size: int | None = None,
-        chunk_overlap: int | None = None
-    ):
-        """
-        Initialize the PDF processor.
-        
-        Args:
-            chunk_size: Size of text chunks (default from settings)
-            chunk_overlap: Overlap between chunks (default from settings)
-        """
+    def __init__(self, chunk_size: int | None = None, chunk_overlap: int | None = None):
         settings = get_settings()
+        self._legacy_splitter = (
+            RecursiveCharacterTextSplitter(
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap
+                if chunk_overlap is not None
+                else min(settings.chunk_overlap, chunk_size - 1),
+            )
+            if chunk_size is not None
+            else None
+        )
         self.chunk_size = chunk_size or settings.chunk_size
         self.chunk_overlap = chunk_overlap or settings.chunk_overlap
-        
-        # Overlap preserves context across chunk boundaries (important for legal/technical PDFs).
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.chunk_size,
-            chunk_overlap=self.chunk_overlap,
-            length_function=len,
-            separators=["\n\n", "\n", ". ", " ", ""],  # Prioritize semantic breaks
-        )
-    
+
     def process_file(self, file_path: str, file_name: str = "document.pdf") -> ProcessedPDF:
-        """
-        Process a PDF file into chunks.
-        
-        Args:
-            file_path: Path to the PDF file
-            file_name: Original file name for metadata
-            
-        Returns:
-            ProcessedPDF with chunks and metadata
-            
-        Raises:
-            ValueError: If file is not a valid PDF
-            IOError: If file cannot be read
-        """
-        # Load PDF using PyPDFLoader
-        loader = PyPDFLoader(file_path)
-        documents = loader.load()
-        
-        if not documents:
-            raise ValueError("PDF appears to be empty or could not be parsed")
-        
-        # Add metadata to each document
+        settings = get_settings()
+        parsed = extract_pdf(file_path)
+        documents = [
+            Document(
+                page_content=page["text"],
+                metadata={
+                    "page": page["page"],
+                    "evidence_scope": "full_text" if parsed["complete"] else "partial_full_text",
+                },
+            )
+            for page in parsed["pages"]
+        ]
+
         for doc in documents:
             doc.metadata["source_file"] = file_name
-        
-        # Split documents into chunks
-        chunks = self.text_splitter.split_documents(documents)
-        
-        # Add chunk indices to metadata
+
+        if self._legacy_splitter is not None:
+            documents = self._legacy_splitter.split_documents(documents)
+        chunks = split_documents(
+            documents, settings.embedding_chunk_tokens, settings.embedding_overlap_tokens
+        )
+
+        if len(chunks) > settings.max_document_chunks:
+            raise ValueError("PDF exceeds the chunk limit")
+
         for i, chunk in enumerate(chunks):
             chunk.metadata["chunk_index"] = i
             chunk.metadata["total_chunks"] = len(chunks)
-        
+
         return ProcessedPDF(
             chunks=chunks,
             file_name=file_name,
-            total_pages=len(documents),
-            total_chunks=len(chunks)
+            total_pages=parsed["total_pages"],
+            total_chunks=len(chunks),
+            readable_pages=len(parsed["pages"]),
+            complete=parsed["complete"],
         )
-    
+
     def process_uploaded_file(self, file_content: bytes, file_name: str) -> ProcessedPDF:
-        """
-        Process an uploaded file from bytes.
-        
-        Creates a temporary file, processes it, then cleans up.
-        
-        Args:
-            file_content: Raw file bytes
-            file_name: Original file name
-            
-        Returns:
-            ProcessedPDF with chunks and metadata
-        """
-        # Create temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
             tmp_file.write(file_content)
             tmp_path = tmp_file.name
-        
+
         try:
-            # Process the temporary file
             result = self.process_file(tmp_path, file_name)
+            document_id = hashlib.sha256(file_name.encode() + file_content).hexdigest()
+            for chunk in result.chunks:
+                chunk.metadata["document_id"] = document_id
             return result
         finally:
-            # Clean up temporary file & trigger garbage collection
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
             gc.collect()
