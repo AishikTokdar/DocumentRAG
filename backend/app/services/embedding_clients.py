@@ -9,14 +9,10 @@ from langchain_core.embeddings import Embeddings
 
 _BATCH = 32
 
-
 def _norm_texts(texts: list[str]) -> list[str]:
     return [(t.replace("\n", " ").strip() or " ") for t in texts]
 
-
 class GroqEmbeddings(Embeddings):
-    """Groq OpenAI /v1/embeddings with explicit JSON input: list[str] and multi-key support."""
-
     def __init__(self, api_key: str | list[str], model: str, base_url: str = "https://api.groq.com/openai/v1") -> None:
         self._keys = [api_key] if isinstance(api_key, str) else (api_key or [])
         self._model = model
@@ -64,10 +60,7 @@ class GroqEmbeddings(Embeddings):
         rows = sorted(data.get("data", []), key=lambda x: x.get("index", 0))
         return rows[0]["embedding"]
 
-
 class GeminiEmbeddings(Embeddings):
-    """Gemini REST embedContent / batchEmbedContents with multi-key support."""
-
     def __init__(self, api_key: str | list[str], model: str) -> None:
         self._keys = [api_key] if isinstance(api_key, str) else (api_key or [])
         self._resource = model if model.startswith("models/") else f"models/{model}"
