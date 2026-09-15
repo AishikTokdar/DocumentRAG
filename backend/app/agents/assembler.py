@@ -11,103 +11,91 @@ Responsibilities:
 """
 
 import re
+from collections import defaultdict
 from typing import Any
 
 from langchain_core.documents import Document
 
+from ..services.evidence import document_identity, format_evidence
 from .base_agent import BaseAgent
+from .optimizer import SUMMARY_SCOPE_NOTICE
 
 
 class AssemblerAgent(BaseAgent):
-    """
-    Agent responsible for assembling the final API-ready output.
-
-    Pipeline position: runs *after* ValidatorAgent (the last step).
-    """
-
     def __init__(self):
         super().__init__(
-            name="assembler",
-            description="Packages the validated answer into a structured response"
+            name="assembler", description="Packages the validated answer into a structured response"
         )
 
-    # ------------------------------------------------------------------
-    # Pipeline interface
-    # ------------------------------------------------------------------
-
     @staticmethod
-    def _tokenize(text: str) -> set[str]:
-        # Keep only useful word tokens for lightweight lexical overlap scoring.
-        return {
-            t
-            for t in re.findall(r"[a-zA-Z0-9]{4,}", text.lower())
-            if t not in {"this", "that", "with", "from", "were", "have", "your"}
-        }
-
-    def _select_relevant_sources(
-        self,
-        answer: str,
-        optimized_chunks: list[Document],
-        fallback_sources: list[Any],
-        max_pages: int = 3,
+    def _coverage_notes(
+        answer: str, chunks: list[Document], citations: dict[str, str], context: dict[str, Any]
     ) -> list[str]:
-        def format_page(raw_p: Any) -> str:
-            if isinstance(raw_p, int):
-                return f"Page {raw_p + 1}"
-            if isinstance(raw_p, str) and raw_p.isdigit():
-                return f"Page {int(raw_p) + 1}"
-            p_str = str(raw_p)
-            return p_str if p_str.startswith("Page") else f"Page {p_str}"
+        requested = context.get("requested_sources", {})
+        notes = [SUMMARY_SCOPE_NOTICE] if context.get("retrieval_intent") == "summary" else []
+        if not requested:
+            return notes
 
-        answer_tokens = self._tokenize(answer)
-        if not answer_tokens:
-            return list(dict.fromkeys(format_page(p) for p in fallback_sources))[:max_pages]
+        references: dict[str, set[str]] = defaultdict(set)
+        for index, doc in enumerate(chunks, 1):
+            references[document_identity(doc.metadata)].add(citations[f"E{index}"])
 
-        page_scores: dict[str, float] = {}
-        for doc in optimized_chunks:
-            p_formatted = format_page(doc.metadata.get("page", "N/A"))
-            chunk_tokens = self._tokenize(doc.page_content)
-            if not chunk_tokens:
-                continue
-            overlap = len(answer_tokens.intersection(chunk_tokens))
-            score = overlap / max(1, len(answer_tokens))
-            page_scores[p_formatted] = max(page_scores.get(p_formatted, 0.0), score)
+        def names(identities: list[str]) -> str:
+            labels = []
+            for identity in identities:
+                label = re.sub(r"[\x00-\x1f\x7f]", " ", requested[identity]).strip()
+                if len(label) > 180:
+                    label = f"{label[:165]}…{label[-14:]}"
+                longest_run = max((len(run) for run in re.findall(r"\x60+", label)), default=0)
+                fence = chr(96) * (1 + longest_run)
+                labels.append(f"{fence} {label} {fence}")
+            return ", ".join(labels)
 
-        ranked_pages = [
-            p for p, score in sorted(page_scores.items(), key=lambda x: x[1], reverse=True) if score > 0
+        missing = [identity for identity in requested if identity not in references]
+        uncited = [
+            identity for identity in requested
+            if identity in references and not any(ref in answer for ref in references[identity])
         ]
-        if ranked_pages:
-            return ranked_pages[:max_pages]
-
-        return list(dict.fromkeys(format_page(p) for p in fallback_sources))[:max_pages]
+        partial = [identity for identity in requested if identity in context.get("partial_source_ids", ())]
+        if missing:
+            notes.append(f"No passages from {names(missing)} fit the evidence selection for this answer.")
+        if uncited:
+            notes.append(f"The answer did not cite the retrieved passages from {names(uncited)}.")
+        if partial:
+            notes.append(f"PDF text extraction was incomplete for {names(partial)}.")
+        return notes
 
     def process(self, input_data: str, context: dict[str, Any]) -> dict[str, Any]:
-        """
-        Build structured output from the validated answer and pipeline context.
-
-        Args:
-            input_data: Validated answer string.
-            context:    Shared pipeline context dict (contains all agent metadata).
-
-        Returns:
-            Dict with ``answer``, ``model_used``, ``sources``, ``pipeline_info``.
-        """
         answer = input_data
-
-        # Collect source page references if caller asked for them
+        optimized_chunks = context.get("optimized_chunks", [])
         sources: list | None = None
-        if context.get("include_sources"):
-            optimized_chunks = context.get("optimized_chunks", [])
-            if isinstance(optimized_chunks, list):
-                sources = self._select_relevant_sources(
-                    answer=answer,
-                    optimized_chunks=optimized_chunks,
-                    fallback_sources=context.get("chunk_sources", []),
-                )
-            else:
-                sources = list(dict.fromkeys(str(p) for p in context.get("chunk_sources", [])))
+        source_details: list[dict[str, Any]] | None = None
+        if isinstance(optimized_chunks, list):
+            _, citations = format_evidence(optimized_chunks)
+            if context.get("include_sources"):
+                sources = list(dict.fromkeys(ref for ref in citations.values() if ref in answer))[:15]
+                details_by_ref: dict[str, dict[str, Any]] = {}
+                for i, doc in enumerate(optimized_chunks, 1):
+                    ref = citations.get(f"E{i}")
+                    if ref and ref in answer and ref not in details_by_ref:
+                        meta = doc.metadata or {}
+                        page = meta.get("page")
+                        clean_text = " ".join(re.sub(r"^\[Document:[^\]]+\]\s*", "", doc.page_content).split())
+                        snippet = clean_text[:220] + ("…" if len(clean_text) > 220 else "")
+                        details_by_ref[ref] = {
+                            "citation": ref,
+                            "source_file": str(meta.get("source_file") or "Document"),
+                            "page": page + 1 if isinstance(page, int) else None,
+                            "snippet": snippet,
+                        }
+                source_details = [details_by_ref[r] for r in sources if r in details_by_ref]
+            notes = self._coverage_notes(answer, optimized_chunks, citations, context)
+            if notes:
+                answer += "\n\n> " + " ".join(notes)
+                context["warnings"] = list(dict.fromkeys([*context.get("warnings", []), *notes]))
+        elif context.get("include_sources"):
+            sources = list(dict.fromkeys(str(p) for p in context.get("chunk_sources", [])))
 
-        # Build pipeline telemetry summary
         pipeline_info = {
             "retrieved_chunks": context.get("retrieved_chunks", 0),
             "filtered_chunks": context.get("filtered_chunks", 0),
@@ -120,6 +108,7 @@ class AssemblerAgent(BaseAgent):
             "answer": answer,
             "model_used": context.get("model_used"),
             "sources": sources,
+            "source_details": source_details,
             "pipeline_info": pipeline_info,
         }
 
