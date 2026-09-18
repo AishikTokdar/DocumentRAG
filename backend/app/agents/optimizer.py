@@ -1,119 +1,81 @@
-"""
-Optimizer Agent
-
-Takes the preprocessed chunks and the original question and builds
-an *optimized prompt payload* for the Synthesizer.  Responsibilities:
-
-- Reorders chunks by estimated relevance (most relevant first).
-- Injects a system instruction prefix that improves answer quality.
-- Truncates the combined context to fit within a safe token budget.
-"""
-
+from collections import defaultdict, deque
 from typing import Any
 
 from langchain_core.documents import Document
 
+from ..config import get_settings
+from ..services.evidence import document_identity, fit_evidence, token_count
 from .base_agent import BaseAgent
 
-# Rough chars-per-token ratio for English text (conservative).
-_CHARS_PER_TOKEN = 4
-# Default token budget for context (leaves room for question + answer).
-_DEFAULT_CONTEXT_TOKEN_BUDGET = 6000
+SUMMARY_SCOPE_NOTICE = "Summary covers retrieved passages, not necessarily every section."
 
+def expand_parent_context(chunks: list[Document], max_parent_tokens: int = 768) -> list[Document]:
+    expanded: list[Document] = []
+    seen_parents: set[tuple[str, str]] = set()
+    for doc in chunks:
+        parent_id = doc.metadata.get("parent_id")
+        parent_content = doc.metadata.get("parent_content")
+        if parent_id and parent_content:
+            identity = (document_identity(doc.metadata), str(parent_id))
+            if token_count(str(parent_content)) > max_parent_tokens:
+                expanded.append(doc)
+                continue
+            if identity in seen_parents:
+                continue
+            seen_parents.add(identity)
+            meta = dict(doc.metadata)
+            breadcrumb = meta.get("breadcrumb", "")
+            if breadcrumb and not parent_content.startswith("[Document:"):
+                content = f"{breadcrumb}\n{parent_content}"
+            else:
+                content = parent_content
+            expanded.append(Document(page_content=content, metadata=meta))
+        else:
+            expanded.append(doc)
+    return expanded
 
 class OptimizerAgent(BaseAgent):
-    """
-    Agent responsible for building the best possible prompt payload.
-
-    Pipeline position: runs *after* PreprocessorAgent and *before*
-    SynthesizerAgent.
-
-    Output: ``Tuple[str, List[Document]]`` – (question, optimised_chunks).
-    """
-
-    def __init__(self, context_token_budget: int = _DEFAULT_CONTEXT_TOKEN_BUDGET):
+    def __init__(self, context_token_budget: int | None = None):
         super().__init__(
-            name="optimizer",
-            description="Reorders and trims context for optimal LLM prompting"
+            name="optimizer", description="Reorders and trims context for optimal LLM prompting"
         )
-        self.context_char_budget = context_token_budget * _CHARS_PER_TOKEN
-
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _relevance_score(doc: Document) -> float:
-        """Higher is better.  Prefer chunks earlier in the document and
-        chunks that are longer (more likely to contain full paragraphs)."""
-        page = doc.metadata.get("page", 999)
-        length_bonus = min(len(doc.page_content) / 1000.0, 1.0)
-        return length_bonus - (page * 0.001)
-
-    def _fit_budget(self, docs: list[Document]) -> list[Document]:
-        """Drop trailing chunks once the char budget is exceeded."""
-        budget_left = self.context_char_budget
-        kept: list[Document] = []
-        for doc in docs:
-            cost = len(doc.page_content)
-            if cost > budget_left:
-                break
-            kept.append(doc)
-            budget_left -= cost
-        return kept
-
-    # ------------------------------------------------------------------
-    # Pipeline interface
-    # ------------------------------------------------------------------
+        self.context_token_budget = context_token_budget or get_settings().context_token_budget
 
     def process(
         self,
         input_data: tuple[str, list[Document]],
         context: dict[str, Any],
     ) -> tuple[str, list[Document]]:
-        """
-        Optimise chunks for the Synthesizer.
-
-        Args:
-            input_data: ``(question, preprocessed_chunks)``
-            context:    Shared pipeline context dict.
-
-        Returns:
-            ``(question, optimised_chunks)``
-        """
-    def process(
-        self,
-        input_data: tuple[str, list[Document]],
-        context: dict[str, Any],
-    ) -> tuple[str, list[Document]]:
-        """
-        Optimise chunks for the Synthesizer.
-
-        Args:
-            input_data: ``(question, preprocessed_chunks)``
-            context:    Shared pipeline context dict.
-
-        Returns:
-            ``(question, optimised_chunks)``
-        """
         question, chunks = input_data
 
-        # Sort by relevance preserving FAISS nearest-neighbor rank order as primary weight
-        indexed = list(enumerate(chunks))
-        indexed_ranked = sorted(
-            indexed,
-            key=lambda item: (1.0 - (item[0] * 0.05)) + min(len(item[1].page_content) / 2000.0, 0.1),
-            reverse=True,
-        )
-        ranked = [doc for _, doc in indexed_ranked]
-
-        # Trim to token budget
-        fitted = self._fit_budget(ranked)
+        intent = context.get("retrieval_intent", "focused")
+        source_count = len({document_identity(doc.metadata) for doc in chunks})
+        parent_budget = min(768, max(64, self.context_token_budget // max(1, source_count) - 100))
+        ranked = expand_parent_context(list(chunks), parent_budget)
+        if intent in {"summary", "comparison"}:
+            groups: dict[str, dict[str, deque[Document]]] = defaultdict(lambda: defaultdict(deque))
+            for doc in ranked:
+                section = doc.metadata.get("section") or doc.metadata.get("page", "")
+                key = str(section) if intent == "summary" else ""
+                groups[document_identity(doc.metadata)][key].append(doc)
+            sources = deque(deque(sections.values()) for sections in groups.values())
+            ranked = []
+            while sources:
+                sections = sources.popleft()
+                passages = sections.popleft()
+                ranked.append(passages.popleft())
+                if passages:
+                    sections.append(passages)
+                if sections:
+                    sources.append(sections)
+        limit = context.get("evidence_limit", context.get("retrieval_k", get_settings().retrieval_k))
+        fitted = fit_evidence(ranked, self.context_token_budget, limit=limit)
+        if intent == "summary":
+            context.setdefault("warnings", []).append(SUMMARY_SCOPE_NOTICE)
 
         context["optimizer_input_chunks"] = len(chunks)
         context["optimizer_output_chunks"] = len(fitted)
-        context["optimizer_char_budget"] = self.context_char_budget
-        # Keep optimized chunks for downstream source-citation refinement.
+        context["optimizer_token_budget"] = self.context_token_budget
         context["optimized_chunks"] = fitted
 
         return (question, fitted)
