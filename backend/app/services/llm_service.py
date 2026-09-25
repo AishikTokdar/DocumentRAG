@@ -58,7 +58,6 @@ if not logger.handlers and not logging.getLogger().handlers:
     logger.propagate = False
 _cooldown_lock = threading.Lock()
 _cooldowns: dict[str, float] = {}
-# Cooldown tracking initialized
 
 
 def _quota_cooldown(error: Exception) -> float:
