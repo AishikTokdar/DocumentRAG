@@ -11,6 +11,7 @@ from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from ..agents.base_agent import AgentResult
 from ..agents.pipeline import AgentPipeline
@@ -25,43 +26,32 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["RAG Chat & Reasoning"])
 
-# Global LLM service
-_llm_service: LLMService | None = None
+def get_llm_service(vector_service: VectorStoreService = Depends(get_vector_service)) -> LLMService:
+    with vector_service._write_lock:
+        service = getattr(vector_service, "chat_service", None)
+        if service is None:
+            service = LLMService()
+            vector_service.chat_service = service
+        return service
 
+def require_chat_turn(vector_service: VectorStoreService = Depends(get_vector_service)):
+    lock = vector_service.operation_lock
+    if not lock.acquire(blocking=False):
+        raise HTTPException(409, "A response is already in progress for these documents.")
+    try:
+        if vector_service._retired:
+            raise HTTPException(409, "Document session has been retired. Re-upload documents.")
+        yield
+    finally:
+        lock.release()
 
-def get_llm_service() -> LLMService:
-    """Dependency to get LLM service."""
-    global _llm_service
-    if _llm_service is None:
-        _llm_service = LLMService()
-    return _llm_service
-
-
-def set_llm_service(llm_service: LLMService):
-    """Set global LLM service from main app."""
-    global _llm_service
-    _llm_service = llm_service
-
-
-@router.post("/ask", response_model=AnswerResponse)
+@router.post("/ask", response_model=AnswerResponse, dependencies=[Depends(require_chat_turn)])
 async def ask_question(
     request: QuestionRequest,
-    _: None = Depends(check_ask_rate_limit),  # underscore = "fire-and-forget" dependency side effect only
+    _: None = Depends(check_ask_rate_limit),
     vector_service: VectorStoreService = Depends(get_vector_service),
     llm_service: LLMService = Depends(get_llm_service),
 ):
-    """
-    Ask a question about the uploaded PDF.
-
-    Uses the full 7-agent RAG pipeline:
-    1. Extractor      – Retrieves relevant chunks
-    2. Analyzer        – Filters low-quality / duplicates
-    3. Preprocessor    – Cleans & normalizes text
-    4. Optimizer       – Reorders / trims to token budget
-    5. Synthesizer     – Generates answer via LLM
-    6. Validator       – Quality-checks the answer
-    7. Assembler       – Packages structured output
-    """
     if not vector_service.is_ready:
         raise HTTPException(
             status_code=400,
@@ -70,8 +60,10 @@ async def ask_question(
 
     try:
         pipeline = AgentPipeline(vector_service, llm_service)
-        result = pipeline.run(
-            question=request.question,
+        result = await run_in_threadpool(
+            pipeline.run,
+            question=llm_service.contextual_question(request.question),
+            original_question=request.question,
             model=request.model,
             include_sources=request.include_sources,
             hybrid_mode=request.hybrid_mode,
@@ -80,9 +72,10 @@ async def ask_question(
         if not result.success:
             raise HTTPException(
                 status_code=500,
-                detail=result.error or "Failed to generate answer",
+                detail="Failed to generate answer. Please try again shortly.",
             )
 
+        llm_service.remember_turn(request.question, result.answer or "")
         increment_chat_completions()
 
         return AnswerResponse(
@@ -90,6 +83,8 @@ async def ask_question(
             model_used=result.model_used,
             processing_time=result.processing_time,
             sources=result.sources,
+            source_details=result.source_details,
+            warnings=result.context.get("warnings"),
         )
 
     except HTTPException:
@@ -98,13 +93,8 @@ async def ask_question(
         logger.exception("Error processing question")
         raise HTTPException(
             status_code=500,
-            detail=f"Error processing question: {str(e)}",
+            detail="Unable to process the question. Please try again shortly.",
         ) from e
-
-
-# ---------------------------------------------------------------------------
-# SSE Streaming endpoint
-# ---------------------------------------------------------------------------
 
 async def _stream_pipeline(
     question: str,
@@ -114,19 +104,20 @@ async def _stream_pipeline(
     vector_service: VectorStoreService,
     llm_service: LLMService,
 ) -> AsyncGenerator[str, None]:
-    """Yield SSE events as the pipeline progresses."""
-    start = time.time()
+    original_question = question
+    question = llm_service.contextual_question(question)
+    start = time.monotonic()
 
     def sse(event: str, data: dict) -> str:
         return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
-    yield sse("status", {"stage": "starting", "message": "Pipeline started"})
+    yield sse("status", {"stage": "starting", "message": "Finding relevant passages…"})
 
     try:
         pipeline = AgentPipeline(vector_service, llm_service)
-
         context: dict = {
             "question": question,
+            "original_question": original_question,
             "model": model,
             "include_sources": include_sources,
             "hybrid_mode": hybrid_mode,
@@ -135,111 +126,115 @@ async def _stream_pipeline(
         results: list[AgentResult] = []
         total_ms = 0.0
 
-        # 1) Extractor
-        ok, chunks, ms, err = pipeline._step(pipeline.extractor, question, context, results)
-        total_ms += ms
-        if not ok:
-            yield sse("error", {"message": err or "Extractor failed"})
-            return
-
-        # 2) Analyzer
-        ok, filtered, ms, err = pipeline._step(pipeline.analyzer, chunks, context, results)
-        total_ms += ms
-        if not ok:
-            yield sse("error", {"message": err or "Analyzer failed"})
-            return
-
-        # 3) Preprocessor
-        ok, cleaned, ms, err = pipeline._step(
-            pipeline.preprocessor, filtered, context, results
+        ok, chunks, ms, err = await run_in_threadpool(
+            pipeline._step, pipeline.extractor, question, context, results
         )
         total_ms += ms
         if not ok:
-            yield sse("error", {"message": err or "Preprocessor failed"})
+            yield sse("error", {"message": "The response could not be completed. Please retry."})
             return
 
-        # 4) Optimizer
-        ok, optimised_pair, ms, err = pipeline._step(
-            pipeline.optimizer, (question, cleaned), context, results
+        yield sse("status", {"stage": "prepare", "message": "Preparing source evidence…"})
+        ok, filtered, ms, err = await run_in_threadpool(
+            pipeline._step, pipeline.analyzer, chunks, context, results
         )
         total_ms += ms
         if not ok:
-            yield sse("error", {"message": err or "Optimizer failed"})
+            yield sse("error", {"message": "The response could not be completed. Please retry."})
             return
 
-        # 5) Synthesizer (true provider token stream)
+        ok, cleaned, ms, err = await run_in_threadpool(
+            pipeline._step, pipeline.preprocessor, filtered, context, results
+        )
+        total_ms += ms
+        if not ok:
+            yield sse("error", {"message": "The response could not be completed. Please retry."})
+            return
+
+        ok, optimised_pair, ms, err = await run_in_threadpool(
+            pipeline._step, pipeline.optimizer, (question, cleaned), context, results
+        )
+        total_ms += ms
+        if not ok:
+            yield sse("error", {"message": "The response could not be completed. Please retry."})
+            return
+
         stream_question, optimised_chunks = optimised_pair
         answer = ""
         model_used = None
+        stream_warnings: list[str] = list(context.get("warnings", []))
         async for event in llm_service.stream_answer_with_failover(
             question=stream_question,
             context_docs=optimised_chunks,
             model=model,
             hybrid_mode=hybrid_mode,
+            original_question=original_question,
         ):
             if event.get("type") == "status":
                 yield sse("status", event)
+            elif event.get("type") == "warning":
+                msg = event.get("message", "")
+                if msg:
+                    stream_warnings.append(msg)
+                    yield sse("warning", {"message": msg})
             elif event.get("type") == "token":
                 content = event.get("content", "")
                 answer += content
                 yield sse("token", {"content": content})
             elif event.get("type") == "complete":
                 model_used = event.get("model_used")
+                answer = event.get("answer", answer)
+                if event.get("warnings"):
+                    for w in event.get("warnings") or []:
+                        if w not in stream_warnings:
+                            stream_warnings.append(w)
 
         context["model_used"] = model_used
         context["answer_length"] = len(answer)
+        context["warnings"] = stream_warnings
 
-        # 6) Validator
-        ok, validated, ms, err = pipeline._step(pipeline.validator, answer, context, results)
-        total_ms += ms
-        if not ok:
-            yield sse("error", {"message": err or "Validator failed"})
-            return
-
-        # 7) Assembler
-        ok, assembled, ms, err = pipeline._step(
-            pipeline.assembler, validated, context, results
+        ok, validated, ms, err = await run_in_threadpool(
+            pipeline._step, pipeline.validator, answer, context, results
         )
         total_ms += ms
         if not ok:
-            yield sse("error", {"message": err or "Assembler failed"})
+            yield sse("error", {"message": "The response could not be completed. Please retry."})
+            return
+
+        ok, assembled, ms, err = await run_in_threadpool(
+            pipeline._step, pipeline.assembler, validated, context, results
+        )
+        total_ms += ms
+        if not ok:
+            yield sse("error", {"message": "The response could not be completed. Please retry."})
             return
 
         increment_chat_completions()
 
-        # Final metadata event
+        llm_service.remember_turn(original_question, assembled.get("answer", answer))
         yield sse(
             "done",
             {
+                "answer": assembled.get("answer", answer),
                 "model_used": assembled.get("model_used") or context.get("model_used"),
-                "processing_time": round(total_ms / 1000, 3)
-                if total_ms > 0
-                else round(time.time() - start, 3),
+                "processing_time": round(time.monotonic() - start, 3),
                 "sources": assembled.get("sources"),
+                "source_details": assembled.get("source_details"),
+                "warnings": context.get("warnings") or None,
             },
         )
 
-    except Exception as exc:
+    except Exception:
         logger.exception("Streaming pipeline error")
-        yield sse("error", {"message": str(exc)})
+        yield sse("error", {"message": "The response could not be completed. Please retry."})
 
-
-@router.post("/ask/stream")
+@router.post("/ask/stream", dependencies=[Depends(require_chat_turn)])
 async def ask_question_stream(
     request: QuestionRequest,
     _: None = Depends(check_ask_rate_limit),
     vector_service: VectorStoreService = Depends(get_vector_service),
     llm_service: LLMService = Depends(get_llm_service),
 ):
-    """
-    SSE streaming variant of /ask.
-
-    Events emitted:
-    - status  – pipeline progress info
-    - token   – incremental answer text
-    - done    – final metadata (model_used, processing_time, sources)
-    - error   – if something goes wrong
-    """
     if not vector_service.is_ready:
         raise HTTPException(
             status_code=400,
@@ -257,8 +252,13 @@ async def ask_question_stream(
         ),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-store",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
     )
+
+@router.delete("/chat/history", dependencies=[Depends(require_chat_turn)])
+async def clear_chat_history(llm_service: LLMService = Depends(get_llm_service)):
+    llm_service.clear_conversation()
+    return {"status": "cleared"}
