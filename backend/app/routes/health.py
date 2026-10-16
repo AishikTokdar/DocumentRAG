@@ -1,70 +1,47 @@
-"""
-Health Check Routes
-"""
-
+from pathlib import Path
 
 from fastapi import APIRouter, Response
+from fastapi.responses import FileResponse
 
 from ..config import get_settings
 from ..models import ModelInfo, ModelsResponse, StatusResponse
 from ..services.llm_service import LLMService
 
 router = APIRouter(tags=["Health & Operations"])
-
+FRONTEND_INDEX = Path(__file__).resolve().parents[2] / "static" / "index.html"
 
 @router.get("/", response_model=StatusResponse)
 async def root():
-    """
-    Root endpoint - basic health check.
-    
-    Returns simple status to confirm API is running.
-    Supports GET and HEAD requests for Render/cloud load balancer health checks.
-    """
+    if FRONTEND_INDEX.is_file():
+        return FileResponse(FRONTEND_INDEX)
     return StatusResponse(
         status="running",
         message="DocumentRAG API is ready. See /docs and /redoc for the full backend reference."
     )
 
-
 @router.head("/", include_in_schema=False)
 async def root_head():
     return Response(status_code=200)
 
-
 @router.get("/health", response_model=StatusResponse)
 async def health_check():
-    """
-    Health check endpoint.
-    
-    Returns detailed health status including configuration and server boot ID.
-    Supports GET and HEAD requests for Render/cloud load balancer health checks.
-    """
     from ..main import SERVER_BOOT_ID
-
     settings = get_settings()
     return StatusResponse(
         status="healthy",
-        message="All systems operational. The backend API is ready.",
+        message="API process is running. Provider configuration is reported separately at /runtime-summary.",
         model=settings.default_model,
         server_boot_id=SERVER_BOOT_ID,
     )
-
 
 @router.head("/health", include_in_schema=False)
 async def health_head():
     return Response(status_code=200)
 
-
 @router.get("/models", response_model=ModelsResponse)
 async def list_models():
-    """
-    List available AI models.
-    
-    Returns all models available across configured providers.
-    """
     settings = get_settings()
     models = LLMService.get_available_models()
-    
     model_infos = [
         ModelInfo(
             id=m["id"],
@@ -73,6 +50,8 @@ async def list_models():
             is_default=m["is_default"],
             is_available=m.get("is_available", True),
             api_key_env=m.get("api_key_env"),
+            access_tier=m.get("access_tier", "free"),
+            is_preview=m.get("is_preview", False),
         )
         for m in models
     ]
@@ -82,14 +61,8 @@ async def list_models():
         default_model=settings.default_model
     )
 
-
 @router.get("/pipeline-info")
 async def pipeline_info():
-    """
-    Describe the 7-agent RAG pipeline stages.
-
-    Useful for frontend visualization and documentation.
-    """
     stages: list[dict] = [
         {
             "order": 1,

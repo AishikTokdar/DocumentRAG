@@ -9,7 +9,6 @@ It runs natively on Hugging Face Spaces using pure Gradio (without FastAPI).
 """
 
 import os
-# Disable Gradio 6 experimental Node.js SSR proxy before importing Gradio
 os.environ["GRADIO_SSR_MODE"] = "False"
 
 import uuid
@@ -25,7 +24,6 @@ import gradio_client.utils as _client_utils
 try:
     import spaces
 except ImportError:
-    # Keep local development and non-ZeroGPU Spaces importable.
     class _SpacesFallback:
         @staticmethod
         def GPU(*args, **kwargs):
@@ -39,13 +37,10 @@ except ImportError:
 
     spaces = _SpacesFallback()
 
-
 @spaces.GPU
 def zerogpu_probe() -> None:
-    """A real Gradio callback used to satisfy ZeroGPU Space detection."""
     return None
 
-# Patch gradio_client.utils._json_schema_to_python_type to handle boolean additionalProperties (Pydantic 2)
 _orig_js_to_py = getattr(_client_utils, "_json_schema_to_python_type", None)
 
 def _safe_json_schema_to_python_type(schema, defs=None):
@@ -58,8 +53,6 @@ def _safe_json_schema_to_python_type(schema, defs=None):
 if _orig_js_to_py:
     _client_utils._json_schema_to_python_type = _safe_json_schema_to_python_type
 
-
-# Lock native C library thread pools for 512MB RAM free tier optimization
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -68,6 +61,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 from app.config import (
+    MAX_PDF_FILES,
     get_settings,
     AI_PROVIDERS,
     PROVIDER_PRIORITY,
@@ -84,16 +78,13 @@ from app.agents.base_agent import AgentResult
 
 logger = logging.getLogger(__name__)
 
-# Server boot identifier
 SERVER_BOOT_ID = str(uuid.uuid4())
 
-# Initialize core RAG services
 settings = get_settings()
 pdf_processor = PDFProcessor()
 vector_registry = SessionVectorRegistry(settings.max_vector_sessions)
 llm_service = LLMService()
 
-# Available model choices for dropdown
 def build_model_choices() -> list[str]:
     choices = [settings.default_model]
     for prov_name in PROVIDER_PRIORITY:
@@ -101,39 +92,27 @@ def build_model_choices() -> list[str]:
         if provider:
             for model_id in provider.models:
                 choices.append(model_id)
-    return list(dict.fromkeys(choices))  # Unique items preserving order
+    return list(dict.fromkeys(choices))
 
 ALL_MODEL_CHOICES = build_model_choices()
 
-
 def ensure_session_id(session_id: str | None) -> str:
-    """Ensure a valid UUID session ID exists."""
     if not session_id or not isinstance(session_id, str) or len(session_id.strip()) < 10:
         return str(uuid.uuid4())
     return session_id.strip()
-
-
-# ---------------------------------------------------------------------------
-# Core Handler Functions (Exposed via Gradio UI & Gradio API `api_name`)
-# ---------------------------------------------------------------------------
 
 def upload_pdf_files(
     files: list[str] | None,
     session_id: str | None = None,
 ) -> tuple[str, str, dict]:
-    """
-    Process and index uploaded PDF documents for a given browser session.
-    
-    API Name: `upload`
-    """
     session_id = ensure_session_id(session_id)
 
     if not files:
         err_msg = "❌ No PDF files provided. Please select at least one PDF file."
         return err_msg, session_id, {"status": "error", "message": "No files uploaded"}
 
-    if len(files) > 3:
-        err_msg = "❌ Maximum 3 PDF document uploads allowed per session."
+    if len(files) > MAX_PDF_FILES:
+        err_msg = f"Maximum {MAX_PDF_FILES} PDF document uploads allowed per session."
         return err_msg, session_id, {"status": "error", "message": err_msg}
 
     file_contents: list[tuple[str, bytes]] = []
@@ -208,7 +187,6 @@ def upload_pdf_files(
 
     return success_md, session_id, result_meta
 
-
 async def stream_chat_response(
     question: str,
     model: str,
@@ -217,11 +195,6 @@ async def stream_chat_response(
     history: list[tuple[str, str]] | list[dict],
     session_id: str | None = None,
 ) -> AsyncGenerator[tuple[list, str, str], None]:
-    """
-    Stream tokens from 7-agent RAG pipeline for Gradio Chatbot.
-    
-    API Name: `ask`
-    """
     session_id = ensure_session_id(session_id)
     q = (question or "").strip()
 
@@ -259,7 +232,6 @@ async def stream_chat_response(
         results: list[AgentResult] = []
         total_ms = 0.0
 
-        # Step 1: Extractor
         yield current_history, "🔎 [Stage 1/7 Extractor] Retrieving relevant PDF chunks...", session_id
         ok, chunks, ms, err = pipeline._step(pipeline.extractor, q, context, results)
         total_ms += ms
@@ -269,7 +241,6 @@ async def stream_chat_response(
             yield current_history, err_text, session_id
             return
 
-        # Step 2: Analyzer
         yield current_history, "📊 [Stage 2/7 Analyzer] Filtering duplicate and noisy chunks...", session_id
         ok, filtered, ms, err = pipeline._step(pipeline.analyzer, chunks, context, results)
         total_ms += ms
@@ -279,7 +250,6 @@ async def stream_chat_response(
             yield current_history, err_text, session_id
             return
 
-        # Step 3: Preprocessor
         yield current_history, "🧹 [Stage 3/7 Preprocessor] Normalizing document text...", session_id
         ok, cleaned, ms, err = pipeline._step(pipeline.preprocessor, filtered, context, results)
         total_ms += ms
@@ -289,7 +259,6 @@ async def stream_chat_response(
             yield current_history, err_text, session_id
             return
 
-        # Step 4: Optimizer
         yield current_history, "⚡ [Stage 4/7 Optimizer] Trimming to optimal token budget...", session_id
         ok, (stream_q, opt_chunks), ms, err = pipeline._step(pipeline.optimizer, (q, cleaned), context, results)
         total_ms += ms
@@ -299,7 +268,6 @@ async def stream_chat_response(
             yield current_history, err_text, session_id
             return
 
-        # Step 5: Synthesizer (streaming tokens from LLM failover)
         yield current_history, "🧠 [Stage 5/7 Synthesizer] Generating AI answer via streaming LLM...", session_id
         accumulated_answer = ""
         model_used = None
@@ -320,12 +288,10 @@ async def stream_chat_response(
         context["model_used"] = model_used
         context["answer_length"] = len(accumulated_answer)
 
-        # Step 6: Validator
         yield current_history, "🛡️ [Stage 6/7 Validator] Verification and quality check...", session_id
         ok, validated, ms, err = pipeline._step(pipeline.validator, accumulated_answer, context, results)
         total_ms += ms
 
-        # Step 7: Assembler
         yield current_history, "📦 [Stage 7/7 Assembler] Formatting final citations and response...", session_id
         ok, assembled, ms, err = pipeline._step(pipeline.assembler, validated, context, results)
         total_ms += ms
@@ -353,17 +319,10 @@ async def stream_chat_response(
         current_history[-1] = (q, err_text)
         yield current_history, err_text, session_id
 
-
 def get_system_status(session_id: str | None = None) -> dict:
-    """
-    Get system health and vector index status for session.
-    
-    API Name: `status`
-    """
     session_id = ensure_session_id(session_id)
     vector_service = vector_registry.get_or_create(session_id)
     is_ready = vector_service.is_ready
-
     return {
         "status": "ready" if is_ready else "waiting",
         "message": "PDF loaded and ready for questions" if is_ready else "No PDF loaded. Please upload a PDF first.",
@@ -374,13 +333,7 @@ def get_system_status(session_id: str | None = None) -> dict:
         "session_id": session_id,
     }
 
-
 def get_available_models_info() -> dict:
-    """
-    Get list of available models and default model configuration.
-    
-    API Name: `models`
-    """
     models_list = []
     for prov_name, prov in AI_PROVIDERS.items():
         enabled = provider_has_credentials(prov)
@@ -397,13 +350,7 @@ def get_available_models_info() -> dict:
         "default_model": settings.default_model,
     }
 
-
 def get_metrics_summary() -> dict:
-    """
-    Get runtime provider metrics and usage statistics.
-    
-    API Name: `runtime_summary`
-    """
     chain = get_embedding_fallback_chain()
     emb_names = {p.name for p, _ in chain}
     provider_rows = []
@@ -428,7 +375,6 @@ def get_metrics_summary() -> dict:
     total_pdf, total_chats = read_counters()
     usable = sum(1 for r in provider_rows if r["status"] in ("working", "partial"))
     overall = "ok" if usable else "degraded"
-
     return {
         "status": overall,
         "providers_total": len(provider_rows),
@@ -442,11 +388,6 @@ def get_metrics_summary() -> dict:
         "total_chat_completions": total_chats,
         "server_boot_id": SERVER_BOOT_ID,
     }
-
-
-# ---------------------------------------------------------------------------
-# Gradio UI Layout Construction
-# ---------------------------------------------------------------------------
 
 def create_gradio_app() -> gr.Blocks:
     with gr.Blocks(title="DocumentRAG Backend Engine") as demo:
@@ -474,7 +415,6 @@ def create_gradio_app() -> gr.Blocks:
 
         with gr.Tabs() as tabs:
 
-            # TAB 1: Document Upload & Vector Indexing
             with gr.Tab("📄 PDF Document Upload", id="tab_upload"):
                 gr.Markdown(
                     """
@@ -487,7 +427,7 @@ def create_gradio_app() -> gr.Blocks:
                         file_input = gr.File(
                             file_count="multiple",
                             file_types=[".pdf"],
-                            label="Select PDF Files (Max 3 files, combined <= 50MB)",
+                            label=f"Select PDF Files (Max {MAX_PDF_FILES} files, combined <= 50MB)",
                         )
                         upload_button = gr.Button("⚙️ Upload & Build Vector Index", variant="primary", size="lg")
                     
@@ -502,7 +442,6 @@ def create_gradio_app() -> gr.Blocks:
                     api_name="upload",
                 )
 
-            # TAB 2: RAG Chat & Agent Reasoning
             with gr.Tab("💬 RAG Chat & Pipeline", id="tab_chat"):
                 with gr.Row():
                     with gr.Column(scale=3):
@@ -534,7 +473,7 @@ def create_gradio_app() -> gr.Blocks:
                             value=settings.default_model,
                             allow_custom_value=True,
                             label="Select AI Model",
-                            info="Supports OpenRouter, Gemini, Groq, Cerebras, SambaNova & HuggingFace models.",
+                            info="Supports the curated free-tier OpenRouter, Gemini and Groq models.",
                         )
                         knowledge_mode_radio = gr.Radio(
                             choices=[
@@ -588,7 +527,6 @@ def create_gradio_app() -> gr.Blocks:
 
                 clear_button.click(lambda: ([], "💡 *Chat cleared.*"), outputs=[chatbot, status_text])
 
-            # TAB 3: Metrics & System Status
             with gr.Tab("📊 System Status & Metrics", id="tab_metrics"):
                 gr.Markdown("### 🔍 System Operational Diagnostics & Provider Health")
                 refresh_metrics_btn = gr.Button("🔄 Refresh System Metrics", variant="secondary")
@@ -636,9 +574,7 @@ def create_gradio_app() -> gr.Blocks:
 
     return demo
 
-
 demo = create_gradio_app()
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", os.environ.get("SERVER_PORT", 7860)))

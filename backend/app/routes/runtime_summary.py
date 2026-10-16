@@ -11,8 +11,10 @@ from ..config import (
     get_embedding_fallback_chain,
     get_settings,
     provider_has_credentials,
+    provider_is_allowed,
 )
 from ..models.schemas import RuntimeProviderRow, RuntimeSummaryResponse
+from ..services.model_health import get_provider_status
 from ..services.usage_counters import read_counters
 
 router = APIRouter(tags=["Runtime Summary & Metrics"])
@@ -20,64 +22,66 @@ router = APIRouter(tags=["Runtime Summary & Metrics"])
 _PROVIDER_LABELS: dict[str, str] = {
     "openrouter": "OpenRouter",
     "groq": "Groq",
-    "openai": "OpenAI",
     "gemini": "Google Gemini",
-    "huggingface": "Hugging Face",
 }
-
 
 @router.get("/runtime-summary", response_model=RuntimeSummaryResponse)
 def runtime_summary() -> RuntimeSummaryResponse:
     settings = get_settings()
-    # Embedding chain is dynamic: only providers with usable credentials appear.
-    chain = get_embedding_fallback_chain()
+    chain = get_embedding_fallback_chain() if settings.embedding_use_remote else []
     emb_names = {p.name for p, _ in chain}
     rows: list[RuntimeProviderRow] = []
+
     for name, prov in AI_PROVIDERS.items():
-        llm = provider_has_credentials(prov)
+        has_creds = provider_has_credentials(prov)
         emb = name in emb_names
-        from ..services.model_health import is_model_healthy
-        healthy_models = sum(1 for m in prov.models if is_model_healthy(m))
-        total_models = len(prov.models)
-        
-        actual_llm_ready = llm and healthy_models > 0
-        
-        if llm:
-            if healthy_models == total_models:
-                st = "working"
-            elif healthy_models > 0:
-                st = "partial"
-            else:
-                st = "unavailable"
-        elif emb:
-            st = "working"
-        else:
-            st = "unavailable"
-            
+        models = prov.models or []
+        st = (
+            get_provider_status(name, has_creds, models)
+            if provider_is_allowed(prov)
+            else "disabled"
+        )
+        llm_ready = st in ("working", "partial")
+
         rows.append(
             RuntimeProviderRow(
                 id=name,
                 display_name=_PROVIDER_LABELS.get(name, name.replace("_", " ").title()),
-                llm_ready=actual_llm_ready,
+                llm_ready=llm_ready,
                 embedding_ready=emb,
                 status=st,
             )
         )
-    usable = sum(1 for r in rows if r.status in ("working", "partial"))
-    overall = "ok" if usable else "degraded"
-    # If zero LLM providers are ready, retrieval alone cannot answer questions.
-    if not any(r.llm_ready for r in rows):
-        overall = "error"
+
+    working_n = sum(1 for r in rows if r.status == "working")
+    partial_n = sum(1 for r in rows if r.status == "partial")
+    unavail_n = sum(
+        1 for r in rows if r.status in ("unavailable", "invalid_api_key")
+    )
     llm_ready_n = sum(1 for r in rows if r.llm_ready)
+
+    if llm_ready_n == 0:
+        overall = "error"
+    elif working_n > 0 and unavail_n == 0 and partial_n == 0:
+        overall = "ok"
+    elif (working_n > 0 or partial_n > 0) and (partial_n > 0 or unavail_n > 0):
+        overall = "degraded"
+    else:
+        overall = "ok" if (working_n > 0 or partial_n > 0) else "error"
+
     total_pdf, total_chats = read_counters()
+
     return RuntimeSummaryResponse(
         status=overall,
         providers=len(rows),
-        working=usable,
+        working=working_n,
         app_version=settings.app_version,
         default_model=settings.default_model,
         providers_detail=rows,
         embedding_chain_steps=len(chain),
+        embedding_chunk_tokens=settings.embedding_chunk_tokens,
+        embedding_overlap_tokens=settings.embedding_overlap_tokens,
+        embedding_mode="remote_with_local_fallback" if settings.embedding_use_remote else "local",
         llm_providers_ready=llm_ready_n,
         rate_limit_upload_per_minute=settings.rate_limit_upload_per_minute,
         rate_limit_ask_per_minute=settings.rate_limit_ask_per_minute,

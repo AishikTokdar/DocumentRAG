@@ -7,7 +7,6 @@ import uuid
 from contextlib import asynccontextmanager
 from textwrap import dedent
 
-# Lock native C library thread pools to 1 thread for 512MB RAM free tier optimization
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -18,34 +17,29 @@ os.environ["PYTHONUNBUFFERED"] = "1"
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from .config import get_settings
+from .config import MAX_PDF_FILES, get_settings
 from .routes import chat_router, health_router, runtime_summary_router, tunnel_router, upload_router
-from .routes.chat import set_llm_service
 from .routes.upload import set_services as set_upload_services
-from .services.faiss_session_cleanup import prune_stale_session_indexes, purge_all_session_indexes
-from .services.llm_service import LLMService
+from .services.body_limits import BodyLimitMiddleware
+from .services.faiss_session_cleanup import prune_stale_session_indexes
 from .services.pdf_processor import PDFProcessor
+from .services.response_headers import ResponseHeadersMiddleware
 from .services.session_vector_registry import SessionVectorRegistry
 
 SERVER_BOOT_ID = str(uuid.uuid4())
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print(f"Starting DocumentRAG API (Boot ID: {SERVER_BOOT_ID})...")
-
     settings = get_settings()
     pdf_processor = PDFProcessor()
 
-    purged = purge_all_session_indexes()
-    print(f"FAISS server restart purge: removed {purged} session directories")
-
+    stale, junk = prune_stale_session_indexes()
+    print(f"FAISS startup cleanup: removed {stale} stale and {junk} invalid session directories")
     vector_registry = SessionVectorRegistry(settings.max_vector_sessions)
-    llm_service = LLMService()
-
     set_upload_services(pdf_processor, vector_registry)
-    set_llm_service(llm_service)
 
     print(f"Vector sessions: max {settings.max_vector_sessions}")
     if settings.rate_limit_upload_per_minute > 0 or settings.rate_limit_ask_per_minute > 0:
@@ -62,7 +56,6 @@ async def lifespan(app: FastAPI):
 
     print("Shutting down...")
 
-
 tags_metadata = [
     {
         "name": "Health & Operations",
@@ -70,7 +63,7 @@ tags_metadata = [
     },
     {
         "name": "Document Ingestion",
-        "description": "Upload PDF documents (up to 3 files, cumulative <= 50 MB) and check indexing status.",
+        "description": f"Upload PDF documents (up to {MAX_PDF_FILES} files, cumulative <= 50 MB) and check indexing status.",
     },
     {
         "name": "RAG Chat & Reasoning",
@@ -86,7 +79,7 @@ tags_metadata = [
     },
 ]
 
-API_DESCRIPTION = dedent("""
+API_DESCRIPTION = dedent(f"""
 DocumentRAG backend API for PDF ingestion, retrieval-augmented generation, and operational metrics.
 
 This service supports multi-document PDF indexing, local zero-key CPU embeddings (`sentence-transformers/all-MiniLM-L6-v2`), FAISS vector search, a 7-stage agent pipeline, and multi-provider AI model failover.
@@ -97,17 +90,15 @@ This service supports multi-document PDF indexing, local zero-key CPU embeddings
 * **OpenAPI Schema**: `/openapi.json` - Raw OpenAPI 3.1 JSON specification.
 
 ### Key Capabilities:
-* **PDF Ingestion** (`POST /upload`): Upload up to 3 PDF files (cumulative size <= 50 MB).
+* **PDF Ingestion** (`POST /upload`): Upload up to {MAX_PDF_FILES} PDF files (cumulative size <= 50 MB).
 * **Real-Time Streaming** (`POST /ask/stream`): Server-Sent Events (SSE) token-by-token streaming responses.
 * **JSON Query** (`POST /ask`): Non-streaming JSON answer with source citations.
-* **Multi-Model Support** (`GET /models`): 22+ models across Google Gemini, Groq, Cerebras, SambaNova, Hugging Face, and OpenRouter.
+* **Multi-Model Support** (`GET /models`): a curated free-tier model catalogue across Google Gemini, Groq, and OpenRouter.
 * **Knowledge Modes**: `Hybrid Brain` (synthesized world knowledge) vs `Strict to Source` (strict document citations).
 """).strip()
 
-
 def create_app() -> FastAPI:
     settings = get_settings()
-
     app = FastAPI(
         title="DocumentRAG Backend API",
         description=API_DESCRIPTION,
@@ -122,6 +113,12 @@ def create_app() -> FastAPI:
     cors_origins = settings.cors_origins
     allow_all = "*" in cors_origins
 
+    app.add_middleware(BodyLimitMiddleware)
+    hosts = [host.strip() for host in settings.allowed_hosts.split(",") if host.strip()]
+    space_host = os.getenv("SPACE_HOST", "").strip().lower()
+    if space_host.endswith(".hf.space") and all(c.isalnum() or c in ".-" for c in space_host):
+        hosts.append(space_host)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"] if allow_all else cors_origins,
@@ -130,26 +127,36 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    app.add_middleware(ResponseHeadersMiddleware)
     app.include_router(health_router)
     app.include_router(runtime_summary_router)
     app.include_router(upload_router)
     app.include_router(chat_router)
     app.include_router(tunnel_router)
 
-    # Serve static frontend if it exists (for single-container Docker deployments)
     static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
     if os.path.exists(static_dir):
         from fastapi.staticfiles import StaticFiles
-        app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+        from starlette.exceptions import HTTPException
+
+        class SPAStaticFiles(StaticFiles):
+            async def get_response(self, path, scope):
+                try:
+                    return await super().get_response(path, scope)
+                except HTTPException as exc:
+                    if exc.status_code == 404 and scope["method"] in {"GET", "HEAD"} and path in {"chat", "api-status"}:
+                        return await super().get_response("index.html", scope)
+                    raise
+
+        app.mount("/", SPAStaticFiles(directory=static_dir, html=True), name="static")
 
     return app
 
-
 app = create_app()
-
 
 if __name__ == "__main__":
     import os
+
     import uvicorn
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)
