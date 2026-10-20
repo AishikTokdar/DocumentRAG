@@ -1,0 +1,825 @@
+{
+  "description": "Synthetic regression corpus, not user documents or a representative production benchmark.",
+  "documents": [
+    {
+      "id": "clause-4.2",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 0,
+      "text": "Clause 4.2\nNotice\nA written termination notice must be delivered 30 days before the service ends."
+    },
+    {
+      "id": "clause-4.3",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 1,
+      "text": "Clause 4.3\nRenewal\nA renewal request must be delivered 60 days before the agreement expires."
+    },
+    {
+      "id": "clause-5.1",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 2,
+      "text": "Clause 5.1\nRefund\nApproved refunds are paid within 14 days after approval."
+    },
+    {
+      "id": "clause-5.2",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 3,
+      "text": "Clause 5.2\nAppeal\nAn appeal must be filed within 7 days after a decision."
+    },
+    {
+      "id": "clause-6.1",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 4,
+      "text": "Clause 6.1\nBackup\nEncrypted backups are retained for 90 days."
+    },
+    {
+      "id": "clause-6.2",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 5,
+      "text": "Clause 6.2\nRestore\nA backup restore requires approval from the incident manager."
+    },
+    {
+      "id": "clause-7.1",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 6,
+      "text": "Clause 7.1\nPassword\nAccount passwords must contain at least 12 characters."
+    },
+    {
+      "id": "clause-7.2",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 7,
+      "text": "Clause 7.2\nRotation\nAPI key rotation is required every 45 days."
+    },
+    {
+      "id": "clause-8.1",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 8,
+      "text": "Clause 8.1\nTravel\nTravel expenses must be submitted with receipts within 21 days."
+    },
+    {
+      "id": "clause-8.2",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 9,
+      "text": "Clause 8.2\nLeave\nAnnual leave requests require approval from the line manager."
+    },
+    {
+      "id": "clause-9.1",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 10,
+      "text": "Clause 9.1\nAccess\nGuest access expires after 48 hours."
+    },
+    {
+      "id": "clause-9.2",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 11,
+      "text": "Clause 9.2\nDeletion\nPersonal data deletion requests are completed within 28 days."
+    },
+    {
+      "id": "clause-10.1",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 12,
+      "text": "Clause 10.1\nWarranty\nHardware warranty coverage lasts 24 months."
+    },
+    {
+      "id": "clause-10.2",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 13,
+      "text": "Clause 10.2\nSupport\nPriority support is available between 08:00 and 18:00 UTC."
+    },
+    {
+      "id": "clause-11.1",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 14,
+      "text": "Clause 11.1\nOnboarding\nNew employee onboarding includes mandatory safety training."
+    },
+    {
+      "id": "clause-11.2",
+      "document_id": "handbook",
+      "source_file": "handbook.pdf",
+      "page": 15,
+      "text": "Clause 11.2\nShipping\nReplacement equipment is shipped within 3 business days."
+    },
+    {
+      "id": "alpha-0",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 0,
+      "text": "Notice rules for Alpha contract item 1: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-1",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 1,
+      "text": "Notice rules for Alpha contract item 2: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-2",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 2,
+      "text": "Notice rules for Alpha contract item 3: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-3",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 3,
+      "text": "Notice rules for Alpha contract item 4: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-4",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 4,
+      "text": "Notice rules for Alpha contract item 5: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-5",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 5,
+      "text": "Notice rules for Alpha contract item 6: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-6",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 6,
+      "text": "Notice rules for Alpha contract item 7: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-7",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 7,
+      "text": "Notice rules for Alpha contract item 8: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-8",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 8,
+      "text": "Notice rules for Alpha contract item 9: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-9",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 9,
+      "text": "Notice rules for Alpha contract item 10: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-10",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 10,
+      "text": "Notice rules for Alpha contract item 11: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-11",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 11,
+      "text": "Notice rules for Alpha contract item 12: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-12",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 12,
+      "text": "Notice rules for Alpha contract item 13: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-13",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 13,
+      "text": "Notice rules for Alpha contract item 14: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-14",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 14,
+      "text": "Notice rules for Alpha contract item 15: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-15",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 15,
+      "text": "Notice rules for Alpha contract item 16: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-16",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 16,
+      "text": "Notice rules for Alpha contract item 17: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-17",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 17,
+      "text": "Notice rules for Alpha contract item 18: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-18",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 18,
+      "text": "Notice rules for Alpha contract item 19: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-19",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 19,
+      "text": "Notice rules for Alpha contract item 20: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-20",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 20,
+      "text": "Notice rules for Alpha contract item 21: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-21",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 21,
+      "text": "Notice rules for Alpha contract item 22: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-22",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 22,
+      "text": "Notice rules for Alpha contract item 23: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-23",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 23,
+      "text": "Notice rules for Alpha contract item 24: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-24",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 24,
+      "text": "Notice rules for Alpha contract item 25: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-25",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 25,
+      "text": "Notice rules for Alpha contract item 26: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-26",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 26,
+      "text": "Notice rules for Alpha contract item 27: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-27",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 27,
+      "text": "Notice rules for Alpha contract item 28: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-28",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 28,
+      "text": "Notice rules for Alpha contract item 29: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-29",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 29,
+      "text": "Notice rules for Alpha contract item 30: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-30",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 30,
+      "text": "Notice rules for Alpha contract item 31: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-31",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 31,
+      "text": "Notice rules for Alpha contract item 32: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-32",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 32,
+      "text": "Notice rules for Alpha contract item 33: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-33",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 33,
+      "text": "Notice rules for Alpha contract item 34: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-34",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 34,
+      "text": "Notice rules for Alpha contract item 35: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-35",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 35,
+      "text": "Notice rules for Alpha contract item 36: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-36",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 36,
+      "text": "Notice rules for Alpha contract item 37: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-37",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 37,
+      "text": "Notice rules for Alpha contract item 38: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-38",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 38,
+      "text": "Notice rules for Alpha contract item 39: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-39",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 39,
+      "text": "Notice rules for Alpha contract item 40: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-40",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 40,
+      "text": "Notice rules for Alpha contract item 41: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-41",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 41,
+      "text": "Notice rules for Alpha contract item 42: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-42",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 42,
+      "text": "Notice rules for Alpha contract item 43: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-43",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 43,
+      "text": "Notice rules for Alpha contract item 44: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-44",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 44,
+      "text": "Notice rules for Alpha contract item 45: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-45",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 45,
+      "text": "Notice rules for Alpha contract item 46: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-46",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 46,
+      "text": "Notice rules for Alpha contract item 47: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-47",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 47,
+      "text": "Notice rules for Alpha contract item 48: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-48",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 48,
+      "text": "Notice rules for Alpha contract item 49: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-49",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 49,
+      "text": "Notice rules for Alpha contract item 50: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-50",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 50,
+      "text": "Notice rules for Alpha contract item 51: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-51",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 51,
+      "text": "Notice rules for Alpha contract item 52: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-52",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 52,
+      "text": "Notice rules for Alpha contract item 53: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-53",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 53,
+      "text": "Notice rules for Alpha contract item 54: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-54",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 54,
+      "text": "Notice rules for Alpha contract item 55: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-55",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 55,
+      "text": "Notice rules for Alpha contract item 56: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-56",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 56,
+      "text": "Notice rules for Alpha contract item 57: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-57",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 57,
+      "text": "Notice rules for Alpha contract item 58: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-58",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 58,
+      "text": "Notice rules for Alpha contract item 59: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-59",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 59,
+      "text": "Notice rules for Alpha contract item 60: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-60",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 60,
+      "text": "Notice rules for Alpha contract item 61: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-61",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 61,
+      "text": "Notice rules for Alpha contract item 62: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-62",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 62,
+      "text": "Notice rules for Alpha contract item 63: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-63",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 63,
+      "text": "Notice rules for Alpha contract item 64: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-64",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 64,
+      "text": "Notice rules for Alpha contract item 65: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-65",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 65,
+      "text": "Notice rules for Alpha contract item 66: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-66",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 66,
+      "text": "Notice rules for Alpha contract item 67: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-67",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 67,
+      "text": "Notice rules for Alpha contract item 68: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-68",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 68,
+      "text": "Notice rules for Alpha contract item 69: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-69",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 69,
+      "text": "Notice rules for Alpha contract item 70: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-70",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 70,
+      "text": "Notice rules for Alpha contract item 71: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-71",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 71,
+      "text": "Notice rules for Alpha contract item 72: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-72",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 72,
+      "text": "Notice rules for Alpha contract item 73: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-73",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 73,
+      "text": "Notice rules for Alpha contract item 74: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-74",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 74,
+      "text": "Notice rules for Alpha contract item 75: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-75",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 75,
+      "text": "Notice rules for Alpha contract item 76: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-76",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 76,
+      "text": "Notice rules for Alpha contract item 77: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-77",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 77,
+      "text": "Notice rules for Alpha contract item 78: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-78",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 78,
+      "text": "Notice rules for Alpha contract item 79: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "alpha-79",
+      "document_id": "alpha",
+      "source_file": "alpha.pdf",
+      "page": 79,
+      "text": "Notice rules for Alpha contract item 80: written notice and notice delivery procedures. The notice period is 30 days. Contract notice policy terms and conditions."
+    },
+    {
+      "id": "beta",
+      "document_id": "beta",
+      "source_file": "beta.pdf",
+      "page": 0,
+      "text": "Beta agreement: Ending this agreement requires a letter to the supplier 60 days before termination."
+    },
+    {
+      "id": "gamma",
+      "document_id": "gamma",
+      "source_file": "gamma.pdf",
+      "page": 0,
+      "text": "Gamma agreement: Notify the supplier at least 90 days before ending the service."
+    }
+  ],
+  "queries": [
+    {
+      "id": "q1",
+      "question": "What does clause 4.2 say?",
+      "relevant_ids": [
+        "clause-4.2"
+      ]
+    },
+    {
+      "id": "q2",
+      "question": "What does clause 4.3 say?",
+      "relevant_ids": [
+        "clause-4.3"
+      ]
+    },
+    {
+      "id": "q3",
+      "question": "What does clause 5.1 say?",
+      "relevant_ids": [
+        "clause-5.1"
+      ]
+    },
+    {
+      "id": "q4",
+      "question": "What does clause 5.2 say?",
+      "relevant_ids": [
+        "clause-5.2"
+      ]
+    },
+    {
+      "id": "q5",
+      "question": "What does clause 6.1 say?",
+      "relevant_ids": [
+        "clause-6.1"
+      ]
+    },
+    {
+      "id": "q6",
+      "question": "What does clause 6.2 say?",
+      "relevant_ids": [
+        "clause-6.2"
+      ]
+    },
+    {
+      "id": "q7",
+      "question": "What does clause 7.1 say?",
+      "relevant_ids": [
+        "clause-7.1"
+      ]
+    },
+    {
+      "id": "q8",
+      "question": "What does clause 7.2 say?",
+      "relevant_ids": [
+        "clause-7.2"
+      ]
+    },
+    {
+      "id": "q9",
+      "question": "What does clause 8.1 say?",
+      "relevant_ids": [
+        "clause-8.1"
+      ]
+    },
+    {
+      "id": "q10",
+      "question": "What does clause 8.2 say?",
+      "relevant_ids": [
+        "clause-8.2"
+      ]
+    },
+    {
+      "id": "q11",
+      "question": "What does clause 9.1 say?",
+      "relevant_ids": [
+        "clause-9.1"
+      ]
+    },
+    {
+      "id": "q12",
+      "question": "What does clause 9.2 say?",
+      "relevant_ids": [
+        "clause-9.2"
+      ]
+    },
+    {
+      "id": "q13",
+      "question": "What does clause 10.1 say?",
+      "relevant_ids": [
+        "clause-10.1"
+      ]
+    },
+    {
+      "id": "q14",
+      "question": "What does clause 10.2 say?",
+      "relevant_ids": [
+        "clause-10.2"
+      ]
+    },
+    {
+      "id": "q15",
+      "question": "What does clause 11.1 say?",
+      "relevant_ids": [
+        "clause-11.1"
+      ]
+    },
+    {
+      "id": "q16",
+      "question": "What does clause 11.2 say?",
+      "relevant_ids": [
+        "clause-11.2"
+      ]
+    },
+    {
+      "id": "comparison",
+      "question": "Compare notice rules across all documents.",
+      "relevant_document_ids": [
+        "alpha",
+        "handbook",
+        "beta",
+        "gamma"
+      ]
+    },
+    {
+      "id": "followup",
+      "question": "What does it require for API key rotation?",
+      "previous": [
+        "Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. Explain the Alpha contract notice policy. "
+      ],
+      "relevant_ids": [
+        "clause-7.2"
+      ]
+    }
+  ]
+}
