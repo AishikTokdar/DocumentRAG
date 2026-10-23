@@ -9,7 +9,6 @@ from app.routes.chat import _stream_pipeline
 from app.services.llm_service import LLMService
 from app.services.vector_store import VectorStoreService
 
-
 class _FakePipeline:
     def __init__(self, vector_service: Any, llm_service: Any):
         self.retrieval_k = 4
@@ -41,19 +40,21 @@ class _FakePipeline:
             )
         return False, None, 0.0, "unknown agent"
 
-
 class _FakeLLMService:
+    def contextual_question(self, question): return question
+    def remember_turn(self, question, answer): pass
+
     async def stream_answer_with_failover(
         self,
         question: str,
         context_docs: list[Any],
         model: str | None = None,
         hybrid_mode: bool = True,
+        original_question: str | None = None,
     ) -> AsyncGenerator[dict[str, str], None]:
         yield {"type": "token", "content": "Hello", "model_used": "openrouter/free"}
         yield {"type": "token", "content": " world", "model_used": "openrouter/free"}
         yield {"type": "complete", "model_used": "openrouter/free"}
-
 
 def _parse_sse_line(block: str) -> tuple[str, dict]:
     event = ""
@@ -64,7 +65,6 @@ def _parse_sse_line(block: str) -> tuple[str, dict]:
         elif line.startswith("data: "):
             payload = json.loads(line[6:])
     return event, payload
-
 
 class TestChatStreamSSE(unittest.TestCase):
     def test_stream_pipeline_emits_token_and_done_with_sources(self):
@@ -94,7 +94,6 @@ class TestChatStreamSSE(unittest.TestCase):
         self.assertEqual(len(done_payloads), 1)
         self.assertEqual(done_payloads[0].get("sources"), ["2"])
         self.assertEqual(done_payloads[0].get("model_used"), "openrouter/free")
-
 
 if __name__ == "__main__":
     unittest.main()
