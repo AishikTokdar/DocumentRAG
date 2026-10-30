@@ -1,13 +1,10 @@
+import modelCatalog from "@/lib/model-catalog.json";
 /**
  * TypeScript Type Definitions
  *
  * Central location for all shared types and interfaces used throughout the application.
  * This ensures type safety and provides clear contracts for data structures.
  */
-
-// ============================================================================
-// Chat & Message Types
-// ============================================================================
 
 export interface ChatMessage {
   id: string;
@@ -16,13 +13,20 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export interface SourceDetail {
+  citation: string;
+  source_file?: string;
+  page?: number;
+  snippet?: string;
+}
+
 export interface ChatEntry {
-  /** Stable id for React keys and session export; optional on legacy IndexedDB rows */
   id?: string;
   question: string;
   answer: string;
   timestamp?: Date;
   sources?: string[];
+  sourceDetails?: SourceDetail[];
   modelUsed?: string;
 }
 
@@ -31,10 +35,6 @@ export interface ChatState {
   isLoading: boolean;
   error: string | null;
 }
-
-// ============================================================================
-// PDF & Document Types
-// ============================================================================
 
 export interface PDFDocument {
   id: string;
@@ -51,14 +51,12 @@ export interface PDFUploadState {
   error: string | null;
 }
 
-// ============================================================================
-// API Types
-// ============================================================================
-
 export interface DocumentFileMeta {
   file_name: string;
   page_count: number;
   chunks_created: number;
+  readable_pages?: number;
+  warnings?: string[];
 }
 
 export interface AskQuestionRequest {
@@ -72,11 +70,13 @@ export interface AskQuestionRequest {
 export interface AskQuestionResponse {
   answer: string;
   sources?: string[];
+  source_details?: SourceDetail[];
   model_used?: string;
   processing_time?: number;
 }
 
 export interface UploadResponse {
+  corpus_id?: string;
   message: string;
   chunks_created: number;
   file_name?: string;
@@ -85,6 +85,9 @@ export interface UploadResponse {
 }
 
 export interface StatusResponse {
+  corpus_id?: string | null;
+  chunks_created?: number;
+  files?: DocumentFileMeta[];
   status: string;
   message: string;
   pdf_loaded?: boolean;
@@ -106,6 +109,8 @@ export interface RuntimeSummary {
   app_version: string;
   default_model: string;
   providers_detail: RuntimeProviderRow[];
+  embedding_chunk_tokens?: number;
+  embedding_overlap_tokens?: number;
   pipeline_agents?: number;
   embedding_chain_steps?: number;
   llm_providers_ready?: number;
@@ -122,16 +127,9 @@ export interface APIError {
   status_code?: number;
 }
 
-// ============================================================================
-// AI Model Types
-// ============================================================================
-
 export type AIProvider =
   | "gemini"
   | "groq"
-  | "cerebras"
-  | "sambanova"
-  | "huggingface"
   | "openrouter";
 
 export interface AIModel {
@@ -145,149 +143,10 @@ export interface AIModel {
   apiKeyEnv?: string;
 }
 
-/**
- * Catalogue of free AI models used as client-side fallback.
- * The ModelSelector also fetches live models from backend /models.
- */
-export const AI_MODELS: AIModel[] = [
-  {
-    id: "gemini-3.5-flash",
-    name: "Gemini 3.5 Flash",
-    provider: "gemini",
-    description: "Free tier via Google AI Studio — ultra fast, smart & accurate",
-    isDefault: true,
-  },
-  {
-    id: "gemini-3.5-flash-lite",
-    name: "Gemini 3.5 Flash-Lite",
-    provider: "gemini",
-    description: "Free tier lightweight Gemini 3.5 model",
-  },
-  {
-    id: "gemini-3.1-flash-lite",
-    name: "Gemini 3.1 Flash-Lite",
-    provider: "gemini",
-    description: "Free tier fast 3.1 model",
-  },
-  {
-    id: "gemini-2.5-flash",
-    name: "Gemini 2.5 Flash",
-    provider: "gemini",
-    description: "Free tier Gemini 2.5 Flash model",
-  },
-  {
-    id: "gemini-2.5-flash-lite",
-    name: "Gemini 2.5 Flash-Lite",
-    provider: "gemini",
-    description: "Free tier lightweight 2.5 model",
-  },
-  {
-    id: "llama-3.3-70b-versatile",
-    name: "Llama 3.3 70B (Groq)",
-    provider: "groq",
-    description: "Free ultra-fast LPU inference on Groq Cloud",
-  },
-  {
-    id: "llama-3.1-8b-instant",
-    name: "Llama 3.1 8B (Groq)",
-    provider: "groq",
-    description: "Free instant LPU responses for general Q&A",
-  },
-  {
-    id: "mixtral-8x7b-32768",
-    name: "Mixtral 8x7B (Groq)",
-    provider: "groq",
-    description: "Free MoE model on Groq Cloud",
-  },
-  {
-    id: "deepseek-r1-distill-llama-70b",
-    name: "DeepSeek R1 70B (Groq)",
-    provider: "groq",
-    description: "Free reasoning model on Groq LPU",
-  },
-  {
-    id: "llama3.3-70b",
-    name: "Llama 3.3 70B (Cerebras)",
-    provider: "cerebras",
-    description: "Free ultra-high-speed Wafer-Scale Engine inference",
-  },
-  {
-    id: "llama3.1-8b",
-    name: "Llama 3.1 8B (Cerebras)",
-    provider: "cerebras",
-    description: "Free 2000+ tokens/sec Cerebras inference",
-  },
-  {
-    id: "Meta-Llama-3.3-70B-Instruct",
-    name: "Llama 3.3 70B (SambaNova)",
-    provider: "sambanova",
-    description: "Free SN40L chip high speed inference",
-  },
-  {
-    id: "DeepSeek-R1-Distill-Llama-70B",
-    name: "DeepSeek R1 70B (SambaNova)",
-    provider: "sambanova",
-    description: "Free SambaNova Cloud reasoning model",
-  },
-  {
-    id: "Qwen2.5-72B-Instruct",
-    name: "Qwen 2.5 72B (SambaNova)",
-    provider: "sambanova",
-    description: "Free SambaNova Cloud 72B model",
-  },
-  {
-    id: "mistralai/Mistral-7B-Instruct-v0.3",
-    name: "Mistral 7B (HuggingFace)",
-    provider: "huggingface",
-    description: "Free serverless inference on Hugging Face",
-  },
-  {
-    id: "HuggingFaceH4/zephyr-7b-beta",
-    name: "Zephyr 7B (HuggingFace)",
-    provider: "huggingface",
-    description: "Free serverless assistant model",
-  },
-  {
-    id: "meta-llama/Meta-Llama-3-8B-Instruct",
-    name: "Llama 3 8B (HuggingFace)",
-    provider: "huggingface",
-    description: "Free Hugging Face serverless router",
-  },
-  {
-    id: "Qwen/Qwen2.5-Coder-32B-Instruct",
-    name: "Qwen 2.5 Coder 32B (HuggingFace)",
-    provider: "huggingface",
-    description: "Free Hugging Face coding & document analysis",
-  },
-  {
-    id: "meta-llama/llama-3.3-70b-instruct:free",
-    name: "Llama 3.3 70B (OpenRouter Free)",
-    provider: "openrouter",
-    description: "100% free tier on OpenRouter",
-  },
-  {
-    id: "google/gemini-2.0-flash-exp:free",
-    name: "Gemini 2.0 Flash (OpenRouter Free)",
-    provider: "openrouter",
-    description: "100% free tier on OpenRouter",
-  },
-  {
-    id: "deepseek/deepseek-r1:free",
-    name: "DeepSeek R1 (OpenRouter Free)",
-    provider: "openrouter",
-    description: "100% free reasoning model on OpenRouter",
-  },
-  {
-    id: "qwen/qwen-2.5-72b-instruct:free",
-    name: "Qwen 2.5 72B (OpenRouter Free)",
-    provider: "openrouter",
-    description: "100% free high-capacity model",
-  },
-];
-
-// ============================================================================
-// UI Component Types
-// ============================================================================
+export const AI_MODELS: AIModel[] = modelCatalog.providers.flatMap(p => p.models.map(m => ({
+  id: m.id, name: m.name, provider: p.name as AIProvider,
+  description: `${p.name} model`, isDefault: m.id === modelCatalog.default_model,
+})));
 
 export type ButtonVariant =
   | "default"
@@ -316,10 +175,6 @@ export interface ScrollRevealProps {
   duration?: number;
   className?: string;
 }
-
-// ============================================================================
-// Feature & Section Types
-// ============================================================================
 
 export interface Feature {
   icon: React.ReactNode;
