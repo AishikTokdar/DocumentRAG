@@ -5,10 +5,6 @@
 
 import type { ChatEntry } from "@/types";
 
-// ---------------------------------------------------------------------------
-// localStorage helpers — UI preferences
-// ---------------------------------------------------------------------------
-
 const LS_PREFIX = "document-rag:";
 
 const LS_KEYS = {
@@ -23,7 +19,6 @@ export function loadPreference<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
     if (raw === null) return fallback;
-    // JSON parse lets us support booleans/objects, not only strings.
     return JSON.parse(raw) as T;
   } catch {
     return fallback;
@@ -34,24 +29,16 @@ export function savePreference<T>(key: string, value: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    /* quota exceeded or private mode — silently skip */
+    /* empty */
   }
 }
 
 export const prefKeys = LS_KEYS;
 
-// ---------------------------------------------------------------------------
-// IndexedDB helpers — chat history per PDF session
-// ---------------------------------------------------------------------------
-
 const DB_NAME = "document-rag-db";
 const DB_VERSION = 1;
 const STORE_NAME = "chat-sessions";
 
-/**
- * Represents a single chat session stored in IndexedDB.
- * Keyed by `pdfName` so each PDF upload gets its own timeline.
- */
 export interface ChatSession {
   pdfName: string;
   entries: ChatEntry[];
@@ -65,7 +52,6 @@ function openDB(): Promise<IDBDatabase> {
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        // keyPath keeps writes simple: store.put(session) performs upsert.
         db.createObjectStore(STORE_NAME, { keyPath: "pdfName" });
       }
     };
@@ -75,18 +61,17 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-/** Save (upsert) a chat session for a given PDF */
 export async function saveChatSession(
   pdfName: string,
   entries: ChatEntry[],
 ): Promise<void> {
+  let db: IDBDatabase | undefined;
   try {
-    const db = await openDB();
+    db = await openDB();
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
     const session: ChatSession = {
       pdfName,
-      // Normalize timestamps on write/read so mixed string/Date payloads do not leak.
       entries: entries.map((e) => ({
         ...e,
         timestamp: e.timestamp ? new Date(e.timestamp) : undefined,
@@ -97,22 +82,25 @@ export async function saveChatSession(
     await new Promise<void>((res, rej) => {
       tx.oncomplete = () => res();
       tx.onerror = () => rej(tx.error);
+      tx.onabort = () => rej(tx.error ?? new Error("Storage transaction aborted"));
     });
   } catch {
-    /* IndexedDB unavailable — silently skip */
+    /* empty */
+  } finally {
+    db?.close();
   }
 }
 
-/** Load a previous chat session for a given PDF */
 export async function loadChatSession(
   pdfName: string,
 ): Promise<ChatEntry[]> {
+  let db: IDBDatabase | undefined;
   try {
-    const db = await openDB();
+    db = await openDB();
     const tx = db.transaction(STORE_NAME, "readonly");
     const store = tx.objectStore(STORE_NAME);
     const request = store.get(pdfName);
-    return new Promise((resolve) => {
+    return await new Promise((resolve) => {
       request.onsuccess = () => {
         const result = request.result as ChatSession | undefined;
         if (result?.entries) {
@@ -130,32 +118,37 @@ export async function loadChatSession(
     });
   } catch {
     return [];
+  } finally {
+    db?.close();
   }
 }
 
-/** Delete a single session */
 export async function deleteChatSession(pdfName: string): Promise<void> {
+  let db: IDBDatabase | undefined;
   try {
-    const db = await openDB();
+    db = await openDB();
     const tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).delete(pdfName);
     await new Promise<void>((res, rej) => {
       tx.oncomplete = () => res();
       tx.onerror = () => rej(tx.error);
+      tx.onabort = () => rej(tx.error ?? new Error("Storage transaction aborted"));
     });
   } catch {
-    /* silently skip */
+    /* empty */
+  } finally {
+    db?.close();
   }
 }
 
-/** List all saved sessions (most recent first) */
 export async function listChatSessions(): Promise<ChatSession[]> {
+  let db: IDBDatabase | undefined;
   try {
-    const db = await openDB();
+    db = await openDB();
     const tx = db.transaction(STORE_NAME, "readonly");
     const store = tx.objectStore(STORE_NAME);
     const request = store.getAll();
-    return new Promise((resolve) => {
+    return await new Promise((resolve) => {
       request.onsuccess = () => {
         const sessions = (request.result as ChatSession[]) || [];
         sessions.sort((a, b) => b.updatedAt - a.updatedAt);
@@ -165,20 +158,25 @@ export async function listChatSessions(): Promise<ChatSession[]> {
     });
   } catch {
     return [];
+  } finally {
+    db?.close();
   }
 }
 
-/** Clear all stored sessions */
 export async function clearAllSessions(): Promise<void> {
+  let db: IDBDatabase | undefined;
   try {
-    const db = await openDB();
+    db = await openDB();
     const tx = db.transaction(STORE_NAME, "readwrite");
     tx.objectStore(STORE_NAME).clear();
     await new Promise<void>((res, rej) => {
       tx.oncomplete = () => res();
       tx.onerror = () => rej(tx.error);
+      tx.onabort = () => rej(tx.error ?? new Error("Storage transaction aborted"));
     });
   } catch {
-    /* silently skip */
+    /* empty */
+  } finally {
+    db?.close();
   }
 }

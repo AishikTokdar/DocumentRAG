@@ -10,8 +10,10 @@
  *   3. ``api`` object groups REST calls used by hooks and components.
  */
 
+import { errorDetail, requestSignal } from "./request-errors";
+import { readServerEvents } from "./sse";
 import { API_ENDPOINTS, joinApiUrl } from "./constants";
-import { getChatApiSessionId, isValidChatApiSessionId } from "./chat-session";
+import { getChatApiSessionId, isValidChatApiSessionId, resetChatApiSessionId } from "./chat-session";
 import type {
   AskQuestionRequest,
   AskQuestionResponse,
@@ -19,11 +21,9 @@ import type {
   StatusResponse,
   APIError,
   RuntimeSummary,
+  SourceDetail,
 } from "@/types";
 
-/**
- * Custom error class for API errors
- */
 export class ApiError extends Error {
   status: number;
   detail: string;
@@ -61,25 +61,26 @@ function withSessionHeaders(init?: RequestInit): RequestInit {
   return { ...init, headers: merged };
 }
 
-/**
- * Base fetch wrapper with error handling
- */
 async function fetchWithErrorHandling<T>(
   url: string,
   options?: RequestInit,
 ): Promise<T> {
   try {
-    const response = await fetch(url, withSessionHeaders(options));
+    const signal = requestSignal(options?.signal);
+    const response = await fetch(url, withSessionHeaders({ ...options, signal }));
 
     if (!response.ok) {
       const errorData: APIError = await response.json().catch(() => ({
         detail: `HTTP error ${response.status}`,
       }));
-      throw new ApiError(errorData.detail, response.status, errorData.detail);
+      const detail = errorDetail(errorData.detail, `HTTP error ${response.status}`);
+      throw new ApiError(detail, response.status, detail);
     }
 
     return await response.json();
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw error;
+    if (error instanceof Error && error.name === "TimeoutError") throw new ApiError("The request timed out. Please retry.", 408);
     if (error instanceof ApiError) {
       throw error;
     }
@@ -91,16 +92,14 @@ async function fetchWithErrorHandling<T>(
   }
 }
 
-// ---------------------------------------------------------------------------
-// SSE streaming helpers
-// ---------------------------------------------------------------------------
-
 export interface StreamCallbacks {
   onToken: (text: string) => void;
   onDone: (meta: {
+    answer?: string;
     model_used?: string;
     processing_time?: number;
     sources?: string[];
+    source_details?: SourceDetail[];
   }) => void;
   onError: (message: string) => void;
   onStatus?: (stage: string, message: string) => void;
@@ -120,56 +119,24 @@ export function streamQuestion(
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(request),
-          signal: controller.signal,
+          signal: requestSignal(controller.signal),
         }),
       );
 
       if (!response.ok || !response.body) {
         const err = await response.json().catch(() => ({ detail: "Stream failed" }));
-        callbacks.onError(err.detail ?? "Stream failed");
+        callbacks.onError(errorDetail(err.detail, "Stream failed"));
         return;
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        let eventName = "";
-        for (const line of lines) {
-          if (line.startsWith("event: ")) {
-            eventName = line.slice(7).trim();
-          } else if (line.startsWith("data: ")) {
-            const raw = line.slice(6);
-            try {
-              const data = JSON.parse(raw);
-              switch (eventName) {
-                case "token":
-                  callbacks.onToken(data.content ?? "");
-                  break;
-                case "done":
-                  callbacks.onDone(data);
-                  break;
-                case "error":
-                  callbacks.onError(data.message ?? "Unknown error");
-                  break;
-                case "status":
-                  callbacks.onStatus?.(data.stage, data.message);
-                  break;
-              }
-            } catch {
-              /* skip malformed JSON */
-            }
-          }
-        }
+      let completed = false;
+      for await (const {event, data} of readServerEvents(response.body)) {
+        if (event === "token") callbacks.onToken(data.content ?? "");
+        else if (event === "status") callbacks.onStatus?.(data.stage, data.message);
+        else if (event === "error") { callbacks.onError(errorDetail(data.message, "Stream interrupted")); return; }
+        else if (event === "done") { completed = true; callbacks.onDone(data); return; }
       }
+      if (!completed) callbacks.onError("The response was interrupted. Please retry.");
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
         callbacks.onError((err as Error).message ?? "Stream failed");
@@ -180,24 +147,23 @@ export function streamQuestion(
   return controller;
 }
 
-// ---------------------------------------------------------------------------
-// REST API Client
-// ---------------------------------------------------------------------------
-
 export const api = {
+  async clearChatHistory(): Promise<void> {
+    await fetchWithErrorHandling(joinApiUrl("/chat/history"), {method:"DELETE"});
+  },
   async checkHealth(): Promise<StatusResponse> {
     return fetchWithErrorHandling<StatusResponse>(
       joinApiUrl(API_ENDPOINTS.HEALTH),
     );
   },
 
-  async getStatus(): Promise<StatusResponse> {
+  async getStatus(signal?: AbortSignal): Promise<StatusResponse> {
     return fetchWithErrorHandling<StatusResponse>(
-      joinApiUrl(API_ENDPOINTS.STATUS),
+      joinApiUrl(API_ENDPOINTS.STATUS), { signal },
     );
   },
 
-  async uploadPDFs(files: File[]): Promise<UploadResponse> {
+  async uploadPDFs(files: File[], signal?: AbortSignal): Promise<UploadResponse> {
     const formData = new FormData();
     files.forEach((f) => {
       formData.append("files", f);
@@ -208,6 +174,7 @@ export const api = {
       {
         method: "POST",
         body: formData,
+        signal,
       },
     );
   },
@@ -217,17 +184,20 @@ export const api = {
   },
 
   async deleteSession(): Promise<{ status: string; session_id: string; purged: boolean }> {
-    return fetchWithErrorHandling<{ status: string; session_id: string; purged: boolean }>(
+    const result = await fetchWithErrorHandling<{ status: string; session_id: string; purged: boolean }>(
       joinApiUrl(API_ENDPOINTS.DELETE_SESSION),
       { method: "DELETE" },
     );
+    resetChatApiSessionId();
+    return result;
   },
 
   async askQuestion(
     question: string,
     model?: string,
     includeSources: boolean = true,
-    hybridMode: boolean = true,
+    hybridMode: boolean = false,
+    signal?: AbortSignal,
   ): Promise<AskQuestionResponse> {
     const requestBody: AskQuestionRequest = {
       question,
@@ -243,6 +213,7 @@ export const api = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
+        signal,
       },
     );
   },
@@ -253,7 +224,7 @@ export async function fetchRuntimeSummary(
 ): Promise<RuntimeSummary> {
   const url = joinApiUrl(API_ENDPOINTS.RUNTIME_SUMMARY);
   const response = await fetch(url, {
-    signal: options?.signal,
+    signal: requestSignal(options?.signal, 15_000),
   });
 
   if (!response.ok) {

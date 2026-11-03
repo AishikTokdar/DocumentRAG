@@ -2,29 +2,19 @@
  * Application Constants
  */
 
-/**
- * API base URL resolution (see `src/lib/env.ts`)
- */
 export { API_BASE_URL, resolveApiBaseUrl, joinApiUrl } from "./env";
 
-/**
- * API Endpoints
- */
 export const API_ENDPOINTS = {
-  HEALTH: "/",
+  HEALTH: "/health",
   STATUS: "/status",
   UPLOAD: "/upload",
   DELETE_SESSION: "/session",
   ASK: "/ask",
   ASK_STREAM: "/ask/stream",
   MODELS: "/models",
-  /** Public JSON for API Status page (no session header). */
   RUNTIME_SUMMARY: "/runtime-summary",
 } as const;
 
-/**
- * Application Metadata
- */
 export const APP_CONFIG = {
   name: "DocumentRAG",
   description:
@@ -34,9 +24,6 @@ export const APP_CONFIG = {
   github: "https://github.com/AishikTokdar",
 } as const;
 
-/**
- * Animation Durations (in seconds)
- */
 export const ANIMATION_DURATION = {
   fast: 0.2,
   normal: 0.4,
@@ -44,9 +31,6 @@ export const ANIMATION_DURATION = {
   verySlow: 0.8,
 } as const;
 
-/**
- * Animation Delays for staggered effects (in seconds)
- */
 export const ANIMATION_DELAY = {
   none: 0,
   short: 0.1,
@@ -54,9 +38,6 @@ export const ANIMATION_DELAY = {
   long: 0.3,
 } as const;
 
-/**
- * Breakpoints matching Tailwind defaults
- */
 export const BREAKPOINTS = {
   sm: 640,
   md: 768,
@@ -65,39 +46,23 @@ export const BREAKPOINTS = {
   "2xl": 1536,
 } as const;
 
-/**
- * Maximum file size for PDF uploads (in bytes)
- * Default: 50MB
- */
+export const MAX_PDF_FILES = 5;
 export const MAX_FILE_SIZE = 50 * 1024 * 1024;
-
-/**
- * Supported file types for upload
- */
 export const SUPPORTED_FILE_TYPES = {
   pdf: ["application/pdf", ".pdf"],
 } as const;
 
-/**
- * Navigation Links
- */
 export const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/chat", label: "Chat" },
 ] as const;
 
-/**
- * Social Links
- */
 export const SOCIAL_LINKS = {
   github: "https://github.com/AishikTokdar",
   repository: "https://github.com/AishikTokdar/DocumentRAG",
   linkedin: "https://www.linkedin.com/in/aishiktokdar/",
 } as const;
 
-/**
- * Feature list for home page
- */
 export const FEATURES = [
   {
     title: "PDF Analysis",
@@ -117,7 +82,7 @@ export const FEATURES = [
   {
     title: "Multi-Model Support",
     description:
-      "Choose from 10+ AI models across OpenRouter, Groq, Gemini, HuggingFace, and direct OpenAI.",
+      "Choose from a curated free-tier model catalogue across OpenRouter, Groq and Gemini.",
   },
   {
     title: "7-Agent Pipeline",
@@ -132,7 +97,7 @@ export const FEATURES = [
   {
     title: "5-Provider Failover",
     description:
-      "Automatic ordered failover across OpenRouter, Groq, Gemini, HuggingFace, and OpenAI.",
+      "Bounded failover across configured free-tier OpenRouter, Groq and Gemini models.",
   },
   {
     title: "Source Citations",
@@ -142,7 +107,7 @@ export const FEATURES = [
   {
     title: "FAISS Persistence",
     description:
-      "Vector index saved to disk automatically — restart the server without re-uploading PDFs.",
+      "Eligible indexes can recover after a restart when host storage persists; retention is configurable.",
   },
   {
     title: "Docker Deployable",
@@ -151,9 +116,6 @@ export const FEATURES = [
   },
 ] as const;
 
-/**
- * How it works steps
- */
 export const HOW_IT_WORKS_STEPS = [
   {
     step: 1,
@@ -175,9 +137,6 @@ export const HOW_IT_WORKS_STEPS = [
   },
 ] as const;
 
-/**
- * Tech stack items
- */
 export const TECH_STACK = [
   { name: "React", category: "frontend" },
   { name: "TypeScript", category: "frontend" },

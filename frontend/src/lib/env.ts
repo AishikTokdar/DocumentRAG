@@ -1,25 +1,14 @@
 /**
- * Runtime environment resolution for Vite (Coolify API + Vercel SPA).
- *
- * Priority order:
- * 1. URL Query Parameter `?port=` or `?api_port=` (persisted in `sessionStorage` as `APP_PORT`)
- * 2. `sessionStorage` persisted `APP_PORT` (for SPA client-side router navigation)
- * 3. Environment variable `VITE_API_BASE_URL` (for Cloud deployments)
- * 4. Fallback default: `http://${hostname || "localhost"}:8000`
+ * Production uses the build-time API base or same-origin routing.
+ * Development also supports browser overrides and a local port fallback.
  */
 
 function trimTrailingSlashes(s: string): string {
   return s.replace(/\/+$/, "");
 }
 
-/**
- * Public API base resolution.
- * Supports dynamic port detection for local development via ?port= parameter,
- * session storage persistence, environment variable VITE_API_BASE_URL, and fallback default.
- */
 export function resolveApiBaseUrl(): string {
-  // 1. Check browser runtime override in localStorage / sessionStorage
-  if (typeof window !== "undefined") {
+  if (import.meta.env.DEV && typeof window !== "undefined") {
     try {
       const storageOverride =
         localStorage.getItem("VITE_API_BASE_URL") ||
@@ -27,13 +16,10 @@ export function resolveApiBaseUrl(): string {
       if (storageOverride && storageOverride.trim()) {
         return trimTrailingSlashes(storageOverride.trim());
       }
-    } catch {
-      // Ignore storage errors
-    }
+    } catch { /* empty */ }
   }
 
-  // 2. Check for URL query parameters: ?api_url= or ?api_base_url= or ?port=
-  if (typeof window !== "undefined") {
+  if (import.meta.env.DEV && typeof window !== "undefined") {
     try {
       const search = window.location.search;
       if (search) {
@@ -53,12 +39,9 @@ export function resolveApiBaseUrl(): string {
           return `http://${host}:${port}`;
         }
       }
-    } catch {
-      // Ignore parsing errors
-    }
+    } catch { /* empty */ }
   }
 
-  // 3. Check build-time environment variable VITE_API_BASE_URL
   const raw = import.meta.env.VITE_API_BASE_URL;
   const trimmed = typeof raw === "string" ? raw.trim() : "";
   if (trimmed) {
@@ -70,8 +53,7 @@ export function resolveApiBaseUrl(): string {
     }
   }
 
-  // 4. Local dev environment resolution (only append port 8000 on localhost/LAN IPs)
-  if (typeof window !== "undefined") {
+  if (import.meta.env.DEV && typeof window !== "undefined") {
     try {
       const host = window.location.hostname || "localhost";
       const isLocalHost =
@@ -88,19 +70,12 @@ export function resolveApiBaseUrl(): string {
         }
         return `http://${host}:8000`;
       }
-    } catch {
-      // Ignore errors
-    }
+    } catch { /* empty */ }
   }
 
-  // 5. Cloud deployment fallback when VITE_API_BASE_URL is not set:
-  // Return empty string (relative calls) without hardcoded third-party domain URLs.
   return "";
 }
 
-/**
- * Sentry tunnel path: always hits backend route POST /api/oversight
- */
 export function resolveSentryTunnelUrl(apiBaseUrl: string = resolveApiBaseUrl()): string {
   const base = trimTrailingSlashes(apiBaseUrl);
   if (base.startsWith("http://") || base.startsWith("https://")) {
@@ -115,7 +90,6 @@ export function resolveSentryTunnelUrl(apiBaseUrl: string = resolveApiBaseUrl())
 export const API_BASE_URL = resolveApiBaseUrl();
 export const SENTRY_TUNNEL_URL = resolveSentryTunnelUrl(API_BASE_URL);
 
-/** Helper function to dynamically construct full API endpoint URLs per request */
 export function joinApiUrl(path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
   const base = trimTrailingSlashes(resolveApiBaseUrl());
