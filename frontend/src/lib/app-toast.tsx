@@ -31,7 +31,6 @@ export const appToast = {
       description: subtitle ?? "Sending your file to the server…",
       icon: wrapIcon(<FileUp className="text-sky-400" />),
     }),
-
   pdfReady: (fileName: string, chunks?: number, freshChat?: boolean) =>
     toast.success("PDF ready", {
       id: "pdf-upload",
@@ -47,14 +46,12 @@ export const appToast = {
             : `${fileName} is ready to chat about.`,
       icon: wrapIcon(<CheckCircle2 className="text-emerald-400" />),
     }),
-
   pdfError: (detail: string) =>
     toast.error("Upload failed", {
       id: "pdf-upload",
       description: detail,
       icon: wrapIcon(<XCircle className="text-rose-400" />),
     }),
-
   replyReady: (questionPreview: string, model?: string) =>
     toast.success("Reply ready", {
       description: model
@@ -62,83 +59,70 @@ export const appToast = {
         : questionPreview,
       icon: wrapIcon(<MessageSquare className="text-purple-400" />),
     }),
-
   chatError: (detail: string) =>
     toast.error("Chat request failed", {
       description: detail,
       icon: wrapIcon(<XCircle className="text-rose-400" />),
     }),
-
   generationStopped: () =>
     toast.message("Generation stopped", {
       description: "The model stopped before finishing a reply.",
       icon: wrapIcon(<Ban className="text-amber-400" />),
     }),
-
   sessionRestored: (pdfName: string, count: number) =>
     toast.success("Session restored", {
       description: `${pdfName} · ${count} saved message${count === 1 ? "" : "s"}`,
       icon: wrapIcon(<History className="text-purple-400" />),
     }),
-
   sessionDeleted: (pdfName: string) =>
     toast.success("Session removed", {
       description: `Deleted saved chat for "${pdfName}".`,
       icon: wrapIcon(<Trash2 className="text-slate-400" />),
     }),
-
   allSessionsCleared: (count: number) =>
     toast.success("All sessions cleared", {
       description: `Removed ${count} saved session${count === 1 ? "" : "s"} from this browser.`,
       icon: wrapIcon(<Trash2 className="text-slate-400" />),
     }),
-
   chatExported: () =>
     toast.success("Chat exported", {
       description: "Your transcript was downloaded as a text file.",
       icon: wrapIcon(<Download className="text-sky-400" />),
     }),
-
   chatCleared: () =>
     toast.message("Chat cleared", {
       description: "Messages were removed from this view (PDF stays loaded).",
       icon: wrapIcon(<Trash2 className="text-slate-400" />),
     }),
-
   uploadReset: () =>
     toast.message("Upload reset", {
       description:
         "Messages were removed from this view (PDF stays loaded). Previous messages are still saved in Sessions.",
       icon: wrapIcon(<RotateCcw className="text-amber-400" />),
     }),
-
   sourcesEnabled: () =>
     toast.success("Sources on", {
       description:
         "When the model returns them, answers include short source citations from your PDF.",
       icon: wrapIcon(<BookOpen className="text-purple-400" />),
     }),
-
   sourcesDisabled: () =>
     toast.message("Sources off", {
       description: "Replies stay text-only (slightly smaller payloads).",
       icon: wrapIcon(<BookOpen className="text-slate-400" />),
     }),
-
   streamingEnabled: () =>
     toast.success("Streaming on", {
       description:
         "Answers stream in over SSE so tokens appear progressively (live typing).",
       icon: wrapIcon(<Radio className="text-emerald-400" />),
     }),
-
   streamingDisabled: () =>
     toast.message("Streaming off", {
       description:
         "Each answer loads as one JSON response when the model finishes (no live tokens).",
       icon: wrapIcon(<Radio className="text-slate-400" />),
     }),
-
   modelSelected: (model: AIModel) =>
     toast.message(`Using ${model.name}`, {
       description: `${model.provider} · ${model.id}. Your choice is sent with each question. Free-tier or tight-quota keys sometimes mean the backend answers with a different configured model instead—that fallback is normal and keeps chat working.`,

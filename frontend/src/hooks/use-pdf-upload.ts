@@ -2,14 +2,16 @@
  * usePDFUpload Hook
  * 
  * Custom hook for managing PDF upload state and operations.
- * Handles single & multi-file upload (up to 3 PDFs, <= 10 pages each).
+ * Handles single and multi-file PDF uploads.
  */
 
 import * as React from "react";
 import { api, ApiError } from "@/lib/api";
+import { MAX_PDF_FILES } from "@/lib/constants";
 import type { DocumentFileMeta } from "@/types";
 
 interface PDFUploadState {
+  corpusId: string | null;
   isUploading: boolean;
   isLoaded: boolean;
   fileName: string | null;
@@ -26,6 +28,7 @@ interface UsePDFUploadReturn extends PDFUploadState {
 }
 
 const initialState: PDFUploadState = {
+  corpusId: null,
   isUploading: false,
   isLoaded: false,
   fileName: null,
@@ -37,13 +40,31 @@ const initialState: PDFUploadState = {
 
 export function usePDFUpload(): UsePDFUploadReturn {
   const [state, setState] = React.useState<PDFUploadState>(initialState);
+  const generationRef = React.useRef(0);
+  const abortRef = React.useRef<AbortController | null>(null);
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const generation = ++generationRef.current;
+    abortRef.current = controller;
+    void api.getStatus(controller.signal).then(status => {
+      if (generation !== generationRef.current || controller.signal.aborted || !status.pdf_loaded || !status.corpus_id || !status.files?.length) return;
+      setState({ corpusId: status.corpus_id, isUploading: false, isLoaded: true,
+        fileName: status.files[0].file_name, chunksCreated: status.chunks_created ?? null,
+        files: status.files, totalFiles: status.files.length, error: null });
+    }).catch(() => { });
+    return () => { generationRef.current += 1; abortRef.current?.abort(); };
+  }, []);
 
   const uploadPDFs = React.useCallback(async (files: File[]) => {
     if (!files.length) return;
-    if (files.length > 3) {
+    abortRef.current?.abort();
+    const generation = ++generationRef.current;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    if (files.length > MAX_PDF_FILES) {
       setState((prev) => ({
         ...prev,
-        error: "Maximum 3 PDF documents allowed per session.",
+        error: `Maximum ${MAX_PDF_FILES} PDF documents allowed per session.`,
       }));
       return;
     }
@@ -55,9 +76,11 @@ export function usePDFUpload(): UsePDFUploadReturn {
     }));
 
     try {
-      const response = await api.uploadPDFs(files);
+      const response = await api.uploadPDFs(files, controller.signal);
+      if (generation !== generationRef.current || controller.signal.aborted) return;
 
       setState({
+        corpusId: response.corpus_id ?? null,
         isUploading: false,
         isLoaded: true,
         fileName: response.file_name || files[0].name,
@@ -67,6 +90,7 @@ export function usePDFUpload(): UsePDFUploadReturn {
         error: null,
       });
     } catch (error) {
+      if (generation !== generationRef.current || controller.signal.aborted) return;
       const message =
         error instanceof ApiError
           ? error.detail
@@ -88,6 +112,8 @@ export function usePDFUpload(): UsePDFUploadReturn {
   );
 
   const reset = React.useCallback(() => {
+    generationRef.current += 1;
+    abortRef.current?.abort();
     setState(initialState);
   }, []);
 

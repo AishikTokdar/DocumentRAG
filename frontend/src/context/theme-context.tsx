@@ -38,7 +38,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
 
     const applyTheme = (t: Theme) => {
-      let activeDark = true;
+      let activeDark: boolean;
       if (t === "system") {
         activeDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       } else {
@@ -62,9 +62,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setTheme = React.useCallback((newTheme: Theme) => {
     try {
       localStorage.setItem(STORAGE_KEY, newTheme);
-    } catch {
-      /* ignore */
-    }
+    } catch { /* empty */ }
     setThemeState(newTheme);
   }, []);
 

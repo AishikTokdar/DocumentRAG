@@ -16,11 +16,8 @@
 import * as React from "react";
 import { api, ApiError, streamQuestion } from "@/lib/api";
 import { createChatEntry } from "@/lib/chat-history";
+import { AI_MODELS } from "@/types";
 import type { ChatEntry, PDFDocument } from "@/types";
-
-// ============================================================================
-// Types
-// ============================================================================
 
 interface ChatContextState {
   pdfDocument: PDFDocument | null;
@@ -49,15 +46,7 @@ interface ChatContextActions {
 
 type ChatContextValue = ChatContextState & ChatContextActions;
 
-// ============================================================================
-// Context
-// ============================================================================
-
 const ChatContext = React.createContext<ChatContextValue | null>(null);
-
-// ============================================================================
-// Initial State
-// ============================================================================
 
 const initialState: ChatContextState = {
   pdfDocument: null,
@@ -67,31 +56,33 @@ const initialState: ChatContextState = {
   isLoading: false,
   uploadError: null,
   chatError: null,
-  selectedModel: "gemini-3.5-flash",
+  selectedModel: AI_MODELS.find(model => model.isDefault)?.id ?? AI_MODELS[0].id,
   includeSources: false,
   streamingEnabled: true,
   streamingAnswer: null,
 };
 
-// ============================================================================
-// Provider Component
-// ============================================================================
-
 interface ChatProviderProps {
   children: React.ReactNode;
 }
 
-/** Global provider: exposes upload + chat + streaming via ``useChatContext`` (optional for pages outside the new chat hooks). */
 export function ChatProvider({ children }: ChatProviderProps) {
   const [state, setState] = React.useState<ChatContextState>(initialState);
   const abortRef = React.useRef<AbortController | null>(null);
   const streamGenerationRef = React.useRef(0);
 
+  React.useEffect(() => () => { streamGenerationRef.current += 1; abortRef.current?.abort(); }, []);
+
   const uploadPDF = React.useCallback(async (file: File) => {
+    abortRef.current?.abort();
+    const generation = ++streamGenerationRef.current;
+    const controller = new AbortController();
+    abortRef.current = controller;
     setState((prev) => ({ ...prev, isUploading: true, uploadError: null }));
 
     try {
-      const response = await api.uploadPDF(file);
+      const response = await api.uploadPDFs([file], controller.signal);
+      if (generation !== streamGenerationRef.current || controller.signal.aborted) return;
 
       const document: PDFDocument = {
         id: `pdf-${Date.now()}`,
@@ -110,6 +101,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
         uploadError: null,
       }));
     } catch (error) {
+      if (generation !== streamGenerationRef.current || controller.signal.aborted) return;
       const message =
         error instanceof ApiError ? error.detail : "Failed to upload PDF";
 
@@ -117,7 +109,6 @@ export function ChatProvider({ children }: ChatProviderProps) {
     }
   }, []);
 
-  /** Send a chat message – chooses streaming or standard based on toggle */
   const sendMessage = React.useCallback(
     async (message: string) => {
       abortRef.current?.abort();
@@ -149,7 +140,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
               if (streamId !== streamGenerationRef.current) return;
               const entry = createChatEntry({
                 question: message,
-                answer: accumulated,
+                answer: meta.answer ?? accumulated,
                 sources: meta.sources,
                 modelUsed: meta.model_used,
               });
@@ -173,12 +164,17 @@ export function ChatProvider({ children }: ChatProviderProps) {
         );
         abortRef.current = controller;
       } else {
+        const controller = new AbortController();
+        abortRef.current = controller;
         try {
           const response = await api.askQuestion(
             message,
             state.selectedModel,
             state.includeSources,
+            false,
+            controller.signal,
           );
+          if (streamId !== streamGenerationRef.current || controller.signal.aborted) return;
 
           const entry = createChatEntry({
             question: message,
@@ -193,6 +189,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
             isLoading: false,
           }));
         } catch (error) {
+          if (streamId !== streamGenerationRef.current || controller.signal.aborted) return;
           const msg =
             error instanceof ApiError ? error.detail : "Failed to get response";
           setState((prev) => ({ ...prev, isLoading: false, chatError: msg }));
@@ -212,17 +209,22 @@ export function ChatProvider({ children }: ChatProviderProps) {
     }));
   }, []);
 
-  const clearChat = React.useCallback(() => {
+  const clearChat = React.useCallback(async () => {
     abortRef.current?.abort();
-    streamGenerationRef.current += 1;
-    setState((prev) => ({ ...prev, chatHistory: [], chatError: null }));
+    const generation = ++streamGenerationRef.current;
+    try {
+      await api.clearChatHistory();
+      if (generation === streamGenerationRef.current) setState(previous => ({ ...previous, chatHistory: [], chatError: null, isLoading: false, streamingAnswer: null }));
+    } catch { if (generation === streamGenerationRef.current) setState(previous => ({ ...previous, chatError: "Could not clear the server conversation. Please retry.", isLoading: false, streamingAnswer: null })); }
   }, []);
 
-  const resetPDF = React.useCallback(() => {
+  const resetPDF = React.useCallback(async () => {
     abortRef.current?.abort();
-    streamGenerationRef.current += 1;
-    api.deleteSession().catch(() => {});
-    setState(initialState);
+    const generation = ++streamGenerationRef.current;
+    try {
+      await api.deleteSession();
+      if (generation === streamGenerationRef.current) setState(initialState);
+    } catch { if (generation === streamGenerationRef.current) setState(previous => ({ ...previous, chatError: "Could not delete the server session. Please retry.", isLoading: false, streamingAnswer: null })); }
   }, []);
 
   const setSelectedModel = React.useCallback((model: string) => {
@@ -253,10 +255,6 @@ export function ChatProvider({ children }: ChatProviderProps) {
     <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
   );
 }
-
-// ============================================================================
-// Hook
-// ============================================================================
 
 export function useChatContext(): ChatContextValue {
   const context = React.useContext(ChatContext);
