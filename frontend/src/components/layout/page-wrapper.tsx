@@ -1,5 +1,5 @@
 import * as React from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Header } from "./header";
 import { Footer } from "./footer";
@@ -13,7 +13,7 @@ export interface PageWrapperProps {
   clipHorizontal?: boolean;
 }
 
-const pageVariants = {
+const pageVariants: Variants = {
   initial: {
     opacity: 0,
     y: 10,
@@ -42,20 +42,21 @@ export function PageWrapper({
   noAnimation = false,
   clipHorizontal = true,
 }: PageWrapperProps) {
+  const reduceMotion = useReducedMotion();
   const content = (
-    <main className={cn("flex-1 min-h-0", className)}>{children}</main>
+    <main id="main-content" tabIndex={-1} className={cn("flex-1 min-h-0", className)}>{children}</main>
   );
 
   return (
     <div
       className={cn(
-        "min-h-screen w-full flex flex-col relative bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 transition-colors duration-250",
+        "app-shell min-h-screen w-full flex flex-col relative",
         clipHorizontal ? "overflow-x-clip" : "overflow-x-visible",
       )}
     >
       <Header />
 
-      {noAnimation ? (
+      {noAnimation || reduceMotion ? (
         content
       ) : (
         <motion.div

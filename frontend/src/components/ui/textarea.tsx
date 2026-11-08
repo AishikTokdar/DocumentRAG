@@ -18,13 +18,9 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  /** Show error state styling */
   error?: boolean;
-  /** Auto-resize based on content */
   autoResize?: boolean;
-  /** Show character count */
   showCount?: boolean;
-  /** Wrapper className */
   wrapperClassName?: string;
 }
 
@@ -47,10 +43,8 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const [charCount, setCharCount] = React.useState(0);
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
-    // Merge refs
     React.useImperativeHandle(ref, () => textareaRef.current!);
 
-    // Auto-resize functionality
     React.useEffect(() => {
       if (autoResize && textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -58,7 +52,6 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       }
     }, [value, autoResize]);
 
-    // Handle change with character count
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       if (showCount) {
         setCharCount(e.target.value.length);
@@ -66,7 +59,6 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       onChange?.(e);
     };
 
-    // Update count on initial value
     React.useEffect(() => {
       if (showCount && typeof value === "string") {
         setCharCount(value.length);
@@ -78,21 +70,14 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={textareaRef}
           className={cn(
-            // Base styles
             "block min-h-[100px] w-full max-w-full rounded-xl border bg-white dark:bg-stone-900 px-4 py-3 text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500",
-            // Focus styles
             "focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40",
-            // Transition
             "transition-all duration-200",
-            // Disabled styles
             "disabled:cursor-not-allowed disabled:opacity-50",
-            // Error styles
             error
               ? "border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50"
               : "border-stone-200 dark:border-stone-700",
-            // Resize behavior
             autoResize ? "resize-none overflow-hidden" : "resize-y",
-            // Bottom padding for character count
             showCount && "pb-8",
             className,
           )}
@@ -102,8 +87,6 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           maxLength={maxLength}
           {...props}
         />
-
-        {/* Character count display */}
         {showCount && (
           <div
             className={cn(

@@ -34,7 +34,6 @@ export function ApiNavDropdown({ className }: { className?: string }) {
       <DropdownMenuContent
         align="start"
         className="w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-md p-1 rounded-xl"
-        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <DropdownMenuItem
           className="gap-2 cursor-pointer text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg p-2"

@@ -35,7 +35,6 @@ export function PipelineSection() {
       </div>
 
       <div className="max-w-4xl mx-auto relative">
-        {/* Progress Line */}
         <div className="absolute left-8 sm:left-1/2 top-4 bottom-4 w-px bg-stone-200 dark:bg-stone-800 -translate-x-1/2" />
         
         <StaggerReveal baseDelay={0.1} staggerDelay={0.1} direction="up" className="space-y-4">
@@ -44,13 +43,8 @@ export function PipelineSection() {
             const isEven = index % 2 === 0;
             return (
               <div key={step.name} className={`relative flex items-center gap-6 sm:gap-8 ${isEven ? "sm:flex-row-reverse" : ""}`}>
-                {/* Step Connector */}
                 <div className="absolute left-8 sm:left-1/2 w-3 h-3 bg-white dark:bg-stone-950 border-2 border-amber-500 rounded-full -translate-x-1/2 z-10" />
-                
-                {/* Mobile Spacing */}
                 <div className="w-10 sm:hidden shrink-0" />
-                
-                {/* Content Card */}
                 <div className={`flex-1 ${isEven ? "sm:text-right" : "text-left"}`}>
                   <GlassCard variant="hover" padding="sm" className="border-stone-200 dark:border-stone-800 shadow-warm-sm group hover:border-amber-300 dark:hover:border-amber-700/50">
                     <GlassCardContent className={`flex items-center gap-4 ${isEven ? "sm:flex-row-reverse" : ""}`}>
@@ -73,8 +67,6 @@ export function PipelineSection() {
                     </GlassCardContent>
                   </GlassCard>
                 </div>
-                
-                {/* Empty Half for Desktop Layout */}
                 <div className="hidden sm:block flex-1" />
               </div>
             );

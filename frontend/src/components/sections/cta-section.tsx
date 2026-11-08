@@ -11,7 +11,6 @@ export function CTASection() {
     <SectionWrapper id="cta">
       <ScrollReveal direction="up" delay={0.1}>
         <div className="relative rounded-3xl overflow-hidden bg-stone-900 dark:bg-stone-950 border border-stone-800 shadow-2xl">
-          {/* Background Decorative Gradients */}
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             <div className="absolute -top-1/2 -right-1/4 w-[800px] h-[800px] bg-gradient-to-br from-amber-600/20 via-orange-500/10 to-transparent rounded-full blur-3xl opacity-50" />
             <div className="absolute -bottom-1/2 -left-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-lime-600/15 via-lime-500/5 to-transparent rounded-full blur-3xl opacity-50" />
@@ -21,7 +20,7 @@ export function CTASection() {
           <div className="relative z-10 px-6 py-16 sm:px-12 sm:py-20 text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-800/50 border border-stone-700/50 text-stone-300 text-xs font-medium mb-6 backdrop-blur-sm">
               <Shield className="w-3.5 h-3.5 text-lime-500" />
-              100% Free &amp; Open Source
+              Open source · Free-tier model catalogue
             </div>
             
             <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight mb-6">

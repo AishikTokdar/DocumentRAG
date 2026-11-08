@@ -23,23 +23,14 @@ import type { AnimationDirection } from "@/types";
 
 export interface ScrollRevealProps {
   children: React.ReactNode;
-  /** Animation direction */
   direction?: AnimationDirection;
-  /** Delay before animation starts (seconds) */
   delay?: number;
-  /** Animation duration (seconds) */
   duration?: number;
-  /** Additional className */
   className?: string;
-  /** Trigger animation only once */
   once?: boolean;
-  /** Viewport margin for trigger */
   margin?: `${number}px` | `${number}%` | `${number}px ${number}px` | `${number}px ${number}px ${number}px ${number}px`;
 }
 
-/**
- * Get animation variants based on direction
- */
 function getVariants(direction: AnimationDirection, duration: number): Variants {
   const distance = 20;
 
@@ -83,17 +74,12 @@ const ScrollReveal = React.forwardRef<HTMLDivElement, ScrollRevealProps>(
     },
     ref
   ) => {
-    // Create internal ref if none provided
     const internalRef = React.useRef<HTMLDivElement>(null);
     const resolvedRef = (ref as React.RefObject<HTMLDivElement>) || internalRef;
-
-    // Track if element is in viewport
     const isInView = useInView(resolvedRef, {
       once,
       margin,
     });
-
-    // Get animation variants
     const variants = getVariants(direction, duration);
 
     return (
@@ -113,21 +99,11 @@ const ScrollReveal = React.forwardRef<HTMLDivElement, ScrollRevealProps>(
 
 ScrollReveal.displayName = "ScrollReveal";
 
-/**
- * StaggerReveal Component
- * 
- * Wrapper for staggered animations of multiple children.
- * Each child animates with a progressive delay.
- */
 export interface StaggerRevealProps {
   children: React.ReactNode;
-  /** Base delay before first animation */
   baseDelay?: number;
-  /** Delay between each child animation */
   staggerDelay?: number;
-  /** Animation direction */
   direction?: AnimationDirection;
-  /** Additional className */
   className?: string;
 }
 

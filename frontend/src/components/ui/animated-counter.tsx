@@ -9,15 +9,10 @@ import * as React from "react";
 import { motion, useInView, useSpring, useTransform } from "framer-motion";
 
 interface AnimatedCounterProps {
-  /** Target value — numeric string like "100" or "50" */
   value: string;
-  /** Suffix to append (e.g. "%", "MB") */
   suffix?: string;
-  /** Prefix to prepend */
   prefix?: string;
-  /** Duration of the counting animation in seconds */
   duration?: number;
-  /** Additional className */
   className?: string;
 }
 
@@ -30,7 +25,6 @@ export function AnimatedCounter({
 }: AnimatedCounterProps) {
   const ref = React.useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true, margin: "0px 0px -10% 0px" });
-
   const numericValue = Number.parseInt(value, 10);
   const isNumeric = !Number.isNaN(numericValue);
 

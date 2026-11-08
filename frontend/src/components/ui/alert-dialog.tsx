@@ -3,9 +3,8 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
-/** Shared sizing / focus for alert dialog actions */
 export const alertDialogButtonBase =
-  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-500 focus-visible:ring-offset-2 focus-visible:ring-offset-stone-100 dark:focus-visible:ring-offset-stone-900 disabled:pointer-events-none disabled:opacity-50";
 
 const AlertDialog = AlertDialogPrimitive.Root;
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
@@ -18,7 +17,7 @@ const AlertDialogOverlay = React.forwardRef<
   <AlertDialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm",
+      "fixed inset-0 z-[100] bg-black/50",
       className,
     )}
     {...props}
@@ -35,7 +34,7 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-[101] grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl border border-white/10 bg-slate-900/95 p-4 sm:p-6 text-white shadow-2xl shadow-black/40",
+        "fixed left-1/2 top-1/2 z-[101] grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-2xl desk-dialog border p-4 sm:p-6 shadow-xl",
         className,
       )}
       {...props}
@@ -90,7 +89,7 @@ const AlertDialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-slate-300 leading-relaxed", className)}
+    className={cn("desk-dialog-description text-sm leading-relaxed", className)}
     {...props}
   />
 ));
@@ -106,7 +105,7 @@ const AlertDialogAction = React.forwardRef<
     className={cn(
       buttonVariants(),
       alertDialogButtonBase,
-      "min-w-[6.5rem] shadow-lg shadow-purple-950/30",
+      "min-w-[6.5rem]",
       className,
     )}
     {...props}
@@ -122,8 +121,8 @@ const AlertDialogCancel = React.forwardRef<
     ref={ref}
     className={cn(
       alertDialogButtonBase,
-      "border border-white/20 bg-slate-800/90 text-white shadow-sm",
-      "hover:border-white/35 hover:bg-slate-700/95",
+      "desk-dialog-cancel border",
+      "hover:opacity-80",
       className,
     )}
     {...props}

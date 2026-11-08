@@ -21,15 +21,10 @@ import { cn } from "@/lib/utils";
 
 export interface SafeImageProps
   extends React.ImgHTMLAttributes<HTMLImageElement> {
-  /** Primary image source */
   src: string;
-  /** Alt text for accessibility */
   alt: string;
-  /** Fallback image source if primary fails */
   fallbackSrc?: string;
-  /** Show loading skeleton */
   showSkeleton?: boolean;
-  /** Additional wrapper className */
   wrapperClassName?: string;
 }
 
@@ -50,19 +45,16 @@ const SafeImage = React.forwardRef<HTMLImageElement, SafeImageProps>(
     const [hasError, setHasError] = React.useState(false);
     const [currentSrc, setCurrentSrc] = React.useState(src);
 
-    // Reset state when src changes
     React.useEffect(() => {
       setIsLoading(true);
       setHasError(false);
       setCurrentSrc(src);
     }, [src]);
 
-    // Handle successful image load
     const handleLoad = () => {
       setIsLoading(false);
     };
 
-    // Handle image load error - try fallback
     const handleError = () => {
       setIsLoading(false);
       if (!hasError && fallbackSrc && currentSrc !== fallbackSrc) {
@@ -73,7 +65,6 @@ const SafeImage = React.forwardRef<HTMLImageElement, SafeImageProps>(
 
     return (
       <div className={cn("relative overflow-hidden", wrapperClassName)}>
-        {/* Loading skeleton */}
         {showSkeleton && isLoading && (
           <div
             className={cn(
@@ -83,7 +74,6 @@ const SafeImage = React.forwardRef<HTMLImageElement, SafeImageProps>(
           />
         )}
 
-        {/* Image element */}
         <img
           ref={ref}
           src={currentSrc}

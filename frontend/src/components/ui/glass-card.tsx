@@ -52,12 +52,11 @@ export interface GlassCardProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof glassCardShellVariants>,
     VariantProps<typeof glassCardInnerVariants> {}
-
 const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
   ({ className, variant, radius, padding, children, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn(glassCardShellVariants({ variant, radius }), className)}
+      className={cn("document-card", glassCardShellVariants({ variant, radius }), className)}
       {...props}
     >
       <div className={glassCardInnerVariants({ radius, padding })}>
@@ -67,7 +66,6 @@ const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
   ),
 );
 GlassCard.displayName = "GlassCard";
-
 const GlassCardHeader = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -79,7 +77,6 @@ const GlassCardHeader = React.forwardRef<
   />
 ));
 GlassCardHeader.displayName = "GlassCardHeader";
-
 const GlassCardTitle = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLHeadingElement>
@@ -94,7 +91,6 @@ const GlassCardTitle = React.forwardRef<
   />
 ));
 GlassCardTitle.displayName = "GlassCardTitle";
-
 const GlassCardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
@@ -106,7 +102,6 @@ const GlassCardDescription = React.forwardRef<
   />
 ));
 GlassCardDescription.displayName = "GlassCardDescription";
-
 const GlassCardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -114,7 +109,6 @@ const GlassCardContent = React.forwardRef<
   <div ref={ref} className={cn("text-stone-900 dark:text-stone-100", className)} {...props} />
 ));
 GlassCardContent.displayName = "GlassCardContent";
-
 const GlassCardFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -129,7 +123,6 @@ const GlassCardFooter = React.forwardRef<
   />
 ));
 GlassCardFooter.displayName = "GlassCardFooter";
-
 export {
   GlassCard,
   GlassCardHeader,

@@ -20,7 +20,6 @@ export function HowItWorksSection() {
       </div>
 
       <div className="relative max-w-5xl mx-auto">
-        {/* Connecting line for desktop */}
         <div className="hidden lg:block absolute top-[50px] left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-stone-200 via-amber-200 to-stone-200 dark:from-stone-800 dark:via-amber-900/40 dark:to-stone-800 z-0" />
 
         <StaggerReveal baseDelay={0.1} staggerDelay={0.2} direction="up" className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">

@@ -24,7 +24,6 @@ export function ScrambleText({
   const startScramble = React.useCallback(() => {
     if (isScrambling) return;
     setIsScrambling(true);
-
     let progress = 0;
     const totalChars = text.length;
 

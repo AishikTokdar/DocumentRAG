@@ -1,4 +1,5 @@
-import { Globe, Zap, Sparkles, Library, Cpu, Layers } from "lucide-react";
+import modelCatalog from "@/lib/model-catalog.json";
+import { Globe } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Badge } from "@/components/ui/badge";
@@ -13,50 +14,13 @@ type ProviderBlock = {
   badge: string;
 };
 
-const providers: ProviderBlock[] = [
-  {
-    name: "Google Gemini (Free)",
-    icon: Sparkles,
-    description: "Free tier via Google AI Studio — Gemini 2.5 Flash, Flash-Lite, Pro, and 2.0 Flash.",
-    models: ["Gemini 2.5 Flash", "Gemini 2.5 Flash-Lite", "Gemini 2.5 Pro", "Gemini 2.0 Flash"],
-    badge: "Primary Free",
-  },
-  {
-    name: "Groq LPU (Free)",
-    icon: Zap,
-    description: "Free ultra-fast inference on Groq Cloud LPU hardware.",
-    models: ["Llama 3.3 70B", "Llama 3.1 8B", "Mixtral 8x7B", "DeepSeek R1 70B"],
-    badge: "Fast Free",
-  },
-  {
-    name: "Cerebras (Free)",
-    icon: Cpu,
-    description: "Free 2000+ tokens/sec inference on Cerebras Wafer-Scale Engine.",
-    models: ["Llama 3.3 70B", "Llama 3.1 8B"],
-    badge: "Ultra Fast",
-  },
-  {
-    name: "SambaNova (Free)",
-    icon: Layers,
-    description: "Free Cloud inference powered by SambaNova SN40L reconfigurable chips.",
-    models: ["Llama 3.3 70B", "DeepSeek R1 70B", "Qwen 2.5 72B"],
-    badge: "High Speed",
-  },
-  {
-    name: "Hugging Face (Free)",
-    icon: Library,
-    description: "Free serverless open-weight models via Hugging Face router.",
-    models: ["Mistral 7B", "Zephyr 7B", "Llama 3 8B", "Qwen 2.5 Coder"],
-    badge: "Free Router",
-  },
-  {
-    name: "OpenRouter (Free Tier)",
-    icon: Globe,
-    description: "100% free-tier zero-credit models via OpenRouter.",
-    models: ["Llama 3.3 70B Free", "Gemini 2.0 Flash Free", "DeepSeek R1 Free", "Qwen 2.5 72B Free"],
-    badge: "Free Tier",
-  },
-];
+const providers: ProviderBlock[] = modelCatalog.providers.map(provider => ({
+  name: `${provider.name === "gemini" ? "Google Gemini" : provider.name === "groq" ? "Groq" : "OpenRouter"} (Free tier)`,
+  icon: Globe,
+  description: "Curated text-generation models. Provider quotas and account billing settings apply.",
+  models: provider.models.map(model => model.name),
+  badge: "Free tier",
+}));
 
 export function ModelsSection() {
   return (
