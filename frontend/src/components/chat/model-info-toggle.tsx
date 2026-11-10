@@ -7,9 +7,6 @@ import { AI_MODELS } from "@/types";
 const providerEnv: Record<string, string> = {
   gemini: "GOOGLE_API_KEY (Free)",
   groq: "GROQ_API_KEY (Free)",
-  cerebras: "CEREBRAS_API_KEY (Free)",
-  sambanova: "SAMBANOVA_API_KEY (Free)",
-  huggingface: "HF_API_KEY (Free)",
   openrouter: "OPENROUTER_API_KEY (Free)",
 };
 
@@ -48,7 +45,7 @@ export function ModelInfoToggle({
               </span>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
-              {activeModelName} ({activeProvider}) — 100% Free AI Provider
+              {activeModelName} ({activeProvider}) — Free-tier model catalogue
             </p>
           </div>
         </div>
@@ -66,7 +63,7 @@ export function ModelInfoToggle({
             className="overflow-hidden border-t border-zinc-200 dark:border-zinc-800 py-3 space-y-3"
           >
             <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              This application exclusively uses 100% Free AI provider tiers (Google Gemini Free Tier, Groq Cloud Free Tier, Hugging Face Serverless, and OpenRouter Free Tier). If a free provider rate-limits, the backend automatically switches to the next free provider.
+              Models are selected from documented Gemini and Groq free tiers and zero-priced OpenRouter variants. Quotas and account billing settings are controlled by each provider. Failover stays within this catalogue.
             </p>
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {AI_MODELS.map((model) => {
