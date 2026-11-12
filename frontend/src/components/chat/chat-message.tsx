@@ -1,7 +1,10 @@
 import * as React from "react";
+import { FormattedMessageContent } from "./answer-content";
 import { User, Bot, Copy, Check, FileText, Cpu, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn, formatRelativeTime, parsePageCitation } from "@/lib/utils";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import type { SourceDetail } from "@/types";
 
 export interface ChatMessageProps {
   role: "user" | "assistant";
@@ -10,221 +13,11 @@ export interface ChatMessageProps {
   isLatest?: boolean;
   index?: number;
   sources?: string[];
+  sourceDetails?: SourceDetail[];
   modelUsed?: string;
 }
 
-function parseInlineMarkdown(text: string): React.ReactNode[] {
-  const regex = /(\*\*\*[^*]+\*\*\*|\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g;
-  const tokens = text.split(regex);
-
-  return tokens.map((token, idx) => {
-    if (token.startsWith("***") && token.endsWith("***") && token.length > 6) {
-      return (
-        <strong key={idx} className="font-bold italic text-stone-900 dark:text-stone-100">
-          {token.slice(3, -3)}
-        </strong>
-      );
-    }
-    if (token.startsWith("**") && token.endsWith("**") && token.length > 4) {
-      return (
-        <strong key={idx} className="font-bold text-stone-900 dark:text-stone-100">
-          {token.slice(2, -2)}
-        </strong>
-      );
-    }
-    if (token.startsWith("`") && token.endsWith("`") && token.length > 2) {
-      return (
-        <code
-          key={idx}
-          className="px-1.5 py-0.5 rounded bg-stone-200/80 dark:bg-stone-800 text-stone-800 dark:text-stone-200 font-mono text-xs"
-        >
-          {token.slice(1, -1)}
-        </code>
-      );
-    }
-    if (token.startsWith("*") && token.endsWith("*") && token.length > 2) {
-      return <em key={idx}>{token.slice(1, -1)}</em>;
-    }
-    return token;
-  });
-}
-
-function renderFormattedInlineText(text: string) {
-  // Catch document citations in brackets: [Source: Filename - Page X] or [Filename - Page X] or [Page X]
-  const citationRegex = /(\[(?:(?:Source:\s*)?[^\]]+\s*-\s*Page\s*\d+[^\]]*|Page\s*\d+[^\]]*)\])/gi;
-  const parts = text.split(citationRegex);
-
-  return parts.map((part, i) => {
-    if (citationRegex.test(part)) {
-      let cleanCitation = part.slice(1, -1).trim();
-      // Strip any hallucinated chunk numbers (e.g., ", Chunk 2 & 3")
-      cleanCitation = cleanCitation.replace(/,\s*Chunk.*$/i, "");
-      return (
-        <span
-          key={i}
-          className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold px-2 py-0.5 mx-1 my-0.5 rounded-md bg-lime-50 dark:bg-lime-950/40 text-lime-800 dark:text-lime-300 border border-lime-200 dark:border-lime-800/60 shadow-xs align-middle"
-        >
-          <FileText className="w-3 h-3 text-lime-600 dark:text-lime-400 shrink-0" />
-          <span>{cleanCitation}</span>
-        </span>
-      );
-    }
-
-    return <span key={i}>{parseInlineMarkdown(part)}</span>;
-  });
-}
-
-export function FormattedMessageContent({ content }: { content: string }) {
-  if (!content) return null;
-
-  const lines = content.split("\n");
-  const elements: React.ReactNode[] = [];
-  let currentList: React.ReactNode[] = [];
-  let isNumbered = false;
-
-  const flushList = (key: string) => {
-    if (currentList.length > 0) {
-      if (isNumbered) {
-        elements.push(
-          <ol key={key} className="list-decimal list-inside space-y-1.5 my-2 pl-2 text-stone-800 dark:text-stone-200">
-            {currentList}
-          </ol>
-        );
-      } else {
-        elements.push(
-          <ul key={key} className="list-disc list-inside space-y-1.5 my-2 pl-2 text-stone-800 dark:text-stone-200">
-            {currentList}
-          </ul>
-        );
-      }
-      currentList = [];
-    }
-  };
-
-  lines.forEach((line, index) => {
-    const trimmed = line.trim();
-
-    if (!trimmed) {
-      flushList(`list-${index}`);
-      elements.push(<div key={`blank-${index}`} className="h-2" />);
-      return;
-    }
-
-    // Horizontal rules
-    if (trimmed === "---" || trimmed === "***") {
-      flushList(`list-${index}`);
-      elements.push(<hr key={`hr-${index}`} className="my-4 border-stone-200 dark:border-stone-800" />);
-      return;
-    }
-
-    // Headers
-    if (trimmed.startsWith("###### ")) {
-      flushList(`list-${index}`);
-      elements.push(
-        <h6 key={`h6-${index}`} className="text-xs font-bold text-stone-900 dark:text-stone-100 mt-2 mb-1 tracking-tight">
-          {renderFormattedInlineText(trimmed.slice(7))}
-        </h6>
-      );
-      return;
-    }
-    if (trimmed.startsWith("##### ")) {
-      flushList(`list-${index}`);
-      elements.push(
-        <h5 key={`h5-${index}`} className="text-sm font-bold text-stone-900 dark:text-stone-100 mt-2 mb-1 tracking-tight">
-          {renderFormattedInlineText(trimmed.slice(6))}
-        </h5>
-      );
-      return;
-    }
-    if (trimmed.startsWith("#### ")) {
-      flushList(`list-${index}`);
-      elements.push(
-        <h4 key={`h4-${index}`} className="text-sm font-bold text-stone-900 dark:text-stone-100 mt-3 mb-1 tracking-tight">
-          {renderFormattedInlineText(trimmed.slice(5))}
-        </h4>
-      );
-      return;
-    }
-    if (trimmed.startsWith("### ")) {
-      flushList(`list-${index}`);
-      elements.push(
-        <h3 key={`h3-${index}`} className="text-base font-bold text-stone-900 dark:text-stone-100 mt-3 mb-1.5 tracking-tight">
-          {renderFormattedInlineText(trimmed.slice(4))}
-        </h3>
-      );
-      return;
-    }
-    if (trimmed.startsWith("## ")) {
-      flushList(`list-${index}`);
-      elements.push(
-        <h2 key={`h2-${index}`} className="text-base font-bold text-stone-900 dark:text-stone-100 mt-4 mb-2 tracking-tight">
-          {renderFormattedInlineText(trimmed.slice(3))}
-        </h2>
-      );
-      return;
-    }
-    if (trimmed.startsWith("# ")) {
-      flushList(`list-${index}`);
-      elements.push(
-        <h1 key={`h1-${index}`} className="text-lg font-extrabold text-stone-900 dark:text-stone-100 mt-4 mb-2 tracking-tight">
-          {renderFormattedInlineText(trimmed.slice(2))}
-        </h1>
-      );
-      return;
-    }
-
-    // Numbered list items like "1. ", "2. ", "3. "
-    const numMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
-    if (numMatch) {
-      if (currentList.length > 0 && !isNumbered) {
-        flushList(`list-${index}`);
-      }
-      isNumbered = true;
-      currentList.push(
-        <li key={`li-${index}`} className="leading-relaxed">
-          {renderFormattedInlineText(numMatch[2])}
-        </li>
-      );
-      return;
-    }
-
-    // Bullet list items like "- ", "• ", "* "
-    const bulletMatch = trimmed.match(/^[-•*]\s+(.*)/);
-    if (bulletMatch) {
-      if (currentList.length > 0 && isNumbered) {
-        flushList(`list-${index}`);
-      }
-      isNumbered = false;
-      currentList.push(
-        <li key={`li-${index}`} className="leading-relaxed">
-          {renderFormattedInlineText(bulletMatch[1])}
-        </li>
-      );
-      return;
-    }
-
-    // Horizontal Rule
-    if (trimmed === "---" || trimmed === "***" || trimmed === "___") {
-      flushList(`list-${index}`);
-      elements.push(
-        <hr key={`hr-${index}`} className="my-4 border-t border-stone-200 dark:border-stone-700/50" />
-      );
-      return;
-    }
-
-    // Normal paragraph line
-    flushList(`list-${index}`);
-    elements.push(
-      <p key={`p-${index}`} className="leading-relaxed my-1">
-        {renderFormattedInlineText(line)}
-      </p>
-    );
-  });
-
-  flushList("list-final");
-
-  return <div className="space-y-1 text-sm sm:text-base leading-relaxed break-words">{elements}</div>;
-}
+export { FormattedMessageContent } from "./answer-content";
 
 export function ChatMessage({
   role,
@@ -233,6 +26,7 @@ export function ChatMessage({
   isLatest: _isLatest = false,
   index: _index = 0,
   sources,
+  sourceDetails,
   modelUsed,
 }: ChatMessageProps) {
   const [copied, setCopied] = React.useState(false);
@@ -257,9 +51,39 @@ export function ChatMessage({
         const pageNum = Number.parseInt(raw, 10) + 1;
         return `Page ${pageNum}`;
       }
-      return raw;
+      return /^\[([^\]]+)\](?:\(https?:\/\/[^)]+\))?$/i.exec(raw)?.[1] ?? raw;
     });
   }, [sources]);
+
+  const sourceNumbers = React.useMemo(() => {
+    const numbers = new Map<string, number>();
+    for (const label of formattedSources) {
+      const citation = parsePageCitation(label);
+      if (citation?.document && !numbers.has(citation.document)) {
+        numbers.set(citation.document, numbers.size + 1);
+      }
+    }
+    return numbers;
+  }, [formattedSources]);
+
+  const sourceDetailsMap = React.useMemo(() => {
+    const map = new Map<string, SourceDetail>();
+    if (!sourceDetails) return map;
+    for (const d of sourceDetails) {
+      if (d.citation) {
+        map.set(d.citation, d);
+        const bare = d.citation.replace(/^\[|\]$/g, "").trim();
+        map.set(bare, d);
+      }
+      if (d.source_file) {
+        map.set(d.source_file, d);
+        if (d.page) {
+          map.set(`${d.source_file} - Page ${d.page}`, d);
+        }
+      }
+    }
+    return map;
+  }, [sourceDetails]);
 
   return (
     <motion.div
@@ -271,10 +95,9 @@ export function ChatMessage({
         isUser ? "flex-row-reverse" : "flex-row",
       )}
     >
-      {/* Avatar */}
       <div
         className={cn(
-          "shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold border transition-colors",
+          isUser ? "shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-semibold border transition-colors" : "hidden",
           isUser
             ? "bg-amber-600 dark:bg-amber-500 text-white border-transparent"
             : "bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700",
@@ -283,32 +106,31 @@ export function ChatMessage({
         {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
       </div>
 
-      {/* Message Content */}
       <div
         className={cn(
-          "relative max-w-[85%] sm:max-w-[75%] flex flex-col",
+          isUser ? "relative max-w-[90%] sm:max-w-[80%] flex flex-col" : "answer-reading relative w-full min-w-0 flex flex-col",
           isUser ? "items-end" : "items-start",
         )}
       >
         <div
           className={cn(
-            "px-4 py-3 rounded-2xl border leading-relaxed text-left transition-colors shadow-warm-sm",
+            isUser ? "px-4 py-3 rounded-xl border leading-relaxed text-left" : "w-full min-w-0 py-2 leading-relaxed text-left",
             isUser
               ? "bg-stone-800 text-stone-100 dark:bg-stone-800 dark:text-stone-100 border-transparent rounded-tr-xs"
-              : "bg-stone-50 dark:bg-stone-900 text-stone-900 dark:text-stone-100 border-stone-200 dark:border-stone-800 rounded-tl-xs",
+              : "text-stone-900 dark:text-stone-100",
           )}
         >
           {isUser ? (
             <p className="whitespace-pre-wrap break-words">{content}</p>
           ) : (
-            <FormattedMessageContent content={content} />
+            <FormattedMessageContent content={content} sourceNumbers={sourceNumbers} sourceDetails={sourceDetailsMap} />
           )}
         </div>
 
-        {/* Source Citations */}
         {!isUser && formattedSources.length > 0 && (
           <div className="mt-2 w-full">
             <button
+              aria-expanded={sourcesOpen}
               onClick={() => setSourcesOpen((p) => !p)}
               className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 transition-colors cursor-pointer"
             >
@@ -324,22 +146,53 @@ export function ChatMessage({
                   exit={{ opacity: 0, height: 0 }}
                   className="mt-1.5 flex flex-wrap gap-1.5 overflow-hidden"
                 >
-                  {formattedSources.map((src, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-lime-800 dark:text-lime-300 bg-lime-100 dark:bg-lime-950/80 rounded-md px-2 py-0.5 border border-lime-300 dark:border-lime-800/60 shadow-xs"
-                    >
-                      <FileText className="w-3 h-3 text-lime-600 dark:text-lime-400 shrink-0" />
-                      {src}
-                    </span>
-                  ))}
+                  {formattedSources.map((src, i) => {
+                    const citation = parsePageCitation(src);
+                    const number = citation && citation.document.length > 28
+                      ? sourceNumbers.get(citation.document)
+                      : undefined;
+                    const detail = sourceDetailsMap.get(src) || (citation ? sourceDetailsMap.get(citation.document) : undefined);
+                    const pill = (
+                      <span
+                        className="inline-flex min-w-0 max-w-full items-center gap-1 font-mono text-[11px] font-semibold text-stone-700 dark:text-stone-200 bg-stone-100 dark:bg-stone-800 hover:bg-amber-50 dark:hover:bg-amber-950/30 hover:border-amber-300 dark:hover:border-amber-700 rounded-md px-2 py-0.5 border border-stone-300 dark:border-stone-700 shadow-xs cursor-pointer transition-colors"
+                      >
+                        <FileText aria-hidden="true" className="w-3 h-3 text-stone-500 dark:text-stone-400 shrink-0" />
+                        <span className="min-w-0 [overflow-wrap:anywhere]">
+                          {number ? "Source " + number + " · " : ""}{src}
+                        </span>
+                      </span>
+                    );
+                    if (!detail) return <React.Fragment key={i}>{pill}</React.Fragment>;
+                    return (
+                      <TooltipProvider key={i} delayDuration={150}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            {pill}
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="start" className="max-w-xs sm:max-w-sm p-3 bg-stone-900 dark:bg-stone-950 text-stone-100 border border-stone-700/80 shadow-2xl rounded-xl">
+                            <div className="space-y-1.5 text-left">
+                              <div className="flex items-center gap-1.5 font-semibold text-xs text-amber-400">
+                                <FileText className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate">{detail.source_file || src}</span>
+                                {detail.page && <span className="text-stone-400 text-[11px] font-normal shrink-0">· Page {detail.page}</span>}
+                              </div>
+                              {detail.snippet && (
+                                <p className="text-[11px] leading-relaxed text-stone-200 italic font-sans border-l-2 border-amber-500/50 pl-2 line-clamp-4">
+                                  "{detail.snippet}"
+                                </p>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         )}
 
-        {/* Footer Meta */}
         <div
           className={cn(
             "flex items-center gap-2 mt-1.5 px-1 text-xs text-stone-400 dark:text-stone-500",
@@ -358,8 +211,8 @@ export function ChatMessage({
           {!isUser && (
             <button
               onClick={handleCopy}
-              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-800 transition-all text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 cursor-pointer"
-              aria-label="Copy message"
+              aria-label={copied ? "Answer copied" : "Copy answer"}
+              className="opacity-100 p-2 rounded hover:bg-stone-100 dark:hover:bg-stone-800 transition-all text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 cursor-pointer"
             >
               {copied ? (
                 <Check className="w-3.5 h-3.5 text-lime-500" />
@@ -388,8 +241,8 @@ export const TypingIndicator = React.forwardRef<
       className="space-y-2"
     >
       {statusMessage && (
-        <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-3 py-2 rounded-xl animate-pulse">
-          <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-500 shrink-0" />
+        <div role="status" className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-300 px-3 py-2">
+          <RefreshCw aria-hidden="true" className="w-3.5 h-3.5 motion-safe:animate-spin text-amber-500 shrink-0" />
           <span>{statusMessage}</span>
         </div>
       )}
@@ -406,7 +259,7 @@ export const TypingIndicator = React.forwardRef<
               {[0, 1, 2].map((i) => (
                 <span
                   key={i}
-                  className="w-1.5 h-1.5 bg-stone-400 dark:bg-stone-500 rounded-full animate-bounce"
+                  className="w-1.5 h-1.5 bg-stone-400 dark:bg-stone-500 rounded-full motion-safe:animate-bounce"
                   style={{ animationDelay: `${i * 0.15}s` }}
                 />
               ))}
