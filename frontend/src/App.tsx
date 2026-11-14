@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, MotionConfig } from "framer-motion";
 import { Sentry } from "@/lib/sentry";
 import { ThemeProvider } from "@/context/theme-context";
+import { HealthProvider } from "@/context/health-context";
+import { BackendNotice } from "@/components/layout/backend-notice";
 import { ChatProvider } from "@/context/chat-context";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
 import { HomePage } from "@/pages/home";
@@ -9,7 +11,6 @@ import { ChatPage } from "@/pages/chat";
 import { ApiStatusPage } from "@/pages/api-status";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { GlobalBackground } from "@/components/ui/global-background";
 
 function AppFallback() {
   return (
@@ -33,12 +34,14 @@ function AppFallback() {
 function App() {
   return (
     <Sentry.ErrorBoundary fallback={<AppFallback />} showDialog>
+      <MotionConfig reducedMotion="user">
       <ThemeProvider>
+        <HealthProvider>
         <BrowserRouter>
-          <GlobalBackground />
           <TooltipProvider delayDuration={350}>
             <Toaster />
             <ScrollToTop />
+            <BackendNotice />
             <ChatProvider>
               <AnimatePresence mode="wait">
                 <Routes>
@@ -51,7 +54,9 @@ function App() {
             </ChatProvider>
           </TooltipProvider>
         </BrowserRouter>
+        </HealthProvider>
       </ThemeProvider>
+      </MotionConfig>
     </Sentry.ErrorBoundary>
   );
 }
