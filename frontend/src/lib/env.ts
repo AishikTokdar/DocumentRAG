@@ -1,79 +1,81 @@
-/**
- * Production uses the build-time API base or same-origin routing.
- * Development also supports browser overrides and a local port fallback.
- */
-
 function trimTrailingSlashes(s: string): string {
   return s.replace(/\/+$/, "");
 }
 
 export function resolveApiBaseUrl(): string {
-  if (import.meta.env.DEV && typeof window !== "undefined") {
-    try {
-      const storageOverride =
-        localStorage.getItem("VITE_API_BASE_URL") ||
-        sessionStorage.getItem("VITE_API_BASE_URL");
-      if (storageOverride && storageOverride.trim()) {
-        return trimTrailingSlashes(storageOverride.trim());
-      }
-    } catch { /* empty */ }
-  }
-
-  if (import.meta.env.DEV && typeof window !== "undefined") {
+  if (typeof window !== "undefined") {
     try {
       const search = window.location.search;
       if (search) {
         const urlParams = new URLSearchParams(search);
-        const queryApiUrl = urlParams.get("api_url") || urlParams.get("api_base_url");
-        if (queryApiUrl && queryApiUrl.trim()) {
-          const cleanUrl = trimTrailingSlashes(queryApiUrl.trim());
-          sessionStorage.setItem("VITE_API_BASE_URL", cleanUrl);
-          return cleanUrl;
-        }
-
-        const queryPort = urlParams.get("port") || urlParams.get("api_port");
+        const queryPort =
+          urlParams.get("port") ||
+          urlParams.get("api_port") ||
+          urlParams.get("backend_port");
         if (queryPort && /^\d+$/.test(queryPort.trim())) {
           const port = queryPort.trim();
-          sessionStorage.setItem("APP_PORT", port);
+          sessionStorage.setItem("DOCUMENT_RAG_PORT", port);
           const host = window.location.hostname || "localhost";
           return `http://${host}:${port}`;
         }
+
+        const queryUrl = urlParams.get("api_url") || urlParams.get("backend_url");
+        if (queryUrl && queryUrl.trim()) {
+          const cleaned = trimTrailingSlashes(queryUrl.trim());
+          sessionStorage.setItem("DOCUMENT_RAG_API_URL", cleaned);
+          return cleaned;
+        }
       }
-    } catch { /* empty */ }
+
+      const storedPort = sessionStorage.getItem("DOCUMENT_RAG_PORT");
+      if (storedPort && /^\d+$/.test(storedPort.trim())) {
+        const host = window.location.hostname || "localhost";
+        return `http://${host}:${storedPort.trim()}`;
+      }
+
+      const storedUrl = sessionStorage.getItem("DOCUMENT_RAG_API_URL");
+      if (storedUrl && storedUrl.trim()) {
+        return trimTrailingSlashes(storedUrl.trim());
+      }
+    } catch {
+      /* empty */
+    }
   }
 
   const raw = import.meta.env.VITE_API_BASE_URL;
   const trimmed = typeof raw === "string" ? raw.trim() : "";
+
   if (trimmed) {
     if (trimmed.startsWith("/")) {
       const rel = trimTrailingSlashes(trimmed) || "/";
-      if (rel !== "/") return rel;
+      return rel === "/" ? "" : rel;
     } else {
       return trimTrailingSlashes(trimmed);
     }
   }
 
-  if (import.meta.env.DEV && typeof window !== "undefined") {
-    try {
-      const host = window.location.hostname || "localhost";
-      const isLocalHost =
-        host === "localhost" ||
-        host === "127.0.0.1" ||
-        host.startsWith("192.168.") ||
-        host.startsWith("10.") ||
-        host.endsWith(".local");
+  if (!import.meta.env.DEV) return "";
 
-      if (isLocalHost) {
-        const storedPort = sessionStorage.getItem("APP_PORT");
-        if (storedPort && /^\d+$/.test(storedPort.trim())) {
-          return `http://${host}:${storedPort.trim()}`;
-        }
-        return `http://${host}:8000`;
-      }
-    } catch { /* empty */ }
+  const envProxyTarget = import.meta.env.VITE_DEV_PROXY_TARGET;
+  if (typeof envProxyTarget === "string" && envProxyTarget.trim()) {
+    return trimTrailingSlashes(envProxyTarget.trim());
   }
 
-  return "";
+  const envPort =
+    import.meta.env.VITE_BACKEND_PORT || import.meta.env.VITE_PORT;
+  if (envPort && String(envPort).trim()) {
+    const host =
+      typeof window !== "undefined" && window.location.hostname
+        ? window.location.hostname
+        : "localhost";
+    return `http://${host}:${String(envPort).trim()}`;
+  }
+
+  const defaultHost =
+    typeof window !== "undefined" && window.location.hostname
+      ? window.location.hostname
+      : "localhost";
+  return `http://${defaultHost}:8000`;
 }
 
 export function resolveSentryTunnelUrl(apiBaseUrl: string = resolveApiBaseUrl()): string {
@@ -92,9 +94,9 @@ export const SENTRY_TUNNEL_URL = resolveSentryTunnelUrl(API_BASE_URL);
 
 export function joinApiUrl(path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
-  const base = trimTrailingSlashes(resolveApiBaseUrl());
-  if (!base || base === "/") {
+  const currentBase = trimTrailingSlashes(resolveApiBaseUrl());
+  if (!currentBase || currentBase === "/") {
     return p;
   }
-  return `${base}${p}`;
+  return `${currentBase}${p}`;
 }

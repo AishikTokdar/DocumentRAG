@@ -25,6 +25,7 @@ export function ApiStatusPage() {
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
+  const activeApiUrl = resolveApiBaseUrl() || (typeof window !== "undefined" ? window.location.origin : "");
 
   const load = React.useCallback(async (isRefresh: boolean) => {
     abortRef.current?.abort();
@@ -65,8 +66,8 @@ export function ApiStatusPage() {
                 API status
               </h1>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-              Base URL: {resolveApiBaseUrl() || "(Relative / Same-Origin)"}
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono break-all">
+              Base URL: <span className="font-semibold text-emerald-700 dark:text-emerald-400">{activeApiUrl}</span>
             </p>
           </div>
 
@@ -91,11 +92,16 @@ export function ApiStatusPage() {
         </div>
 
         <p className="mb-4 text-xs text-stone-500" role="status">Backend: {health.status}. Last checked: {health.lastChecked?.toLocaleTimeString() ?? "Pending"}. Provider configuration below is separate from verified model availability.</p>
-        {err && (
+
+        {(err || health.status === "disconnected") && (
           <GlassCard padding="default" className="mb-6 border-red-500/50 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-300">
-            <p role="alert" className="text-sm font-medium">Could not load the backend status: {err}</p>
-            <p className="text-xs mt-1 opacity-80">
-              Ensure <code className="font-mono bg-red-100 dark:bg-red-900/40 px-1 rounded">VITE_API_BASE_URL</code> is set in your Cloudflare Pages / Vercel environment variables, then rebuild the frontend. Backend CORS must allow this exact frontend origin.
+            <p role="alert" className="text-sm font-medium">Could not load the backend status: {err || "Backend service offline"}</p>
+            <p className="text-xs mt-1 opacity-90 leading-relaxed">
+              Could not connect to <code className="font-mono bg-red-100 dark:bg-red-900/40 px-1 rounded">{activeApiUrl}</code>.
+              <br />
+              • <strong>Cloud Sleep:</strong> If hosted on free tiers (like Hugging Face Spaces or Render), instances sleep after inactivity and need ~30–60 seconds to complete cold boot.
+              <br />
+              • <strong>Configuration:</strong> Ensure <code className="font-mono bg-red-100 dark:bg-red-900/40 px-1 rounded">VITE_API_BASE_URL</code> is set in your Cloudflare Pages / Vercel build settings, or pass <code className="font-mono bg-red-100 dark:bg-red-900/40 px-1 rounded">?api_url=https://YOUR-SPACE.hf.space</code> in your browser.
             </p>
           </GlassCard>
         )}
