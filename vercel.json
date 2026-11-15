@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "ignoreCommand": "git rev-parse --verify HEAD^ >/dev/null 2>&1 && git diff HEAD^ HEAD --quiet -- frontend/ package.json package-lock.json vercel.json scripts/copy_frontend_build.mjs",
-  "installCommand": "npm ci",
+  "ignoreCommand": "git rev-parse --verify HEAD^ >/dev/null 2>&1 && git diff HEAD^ HEAD --quiet -- frontend/ package.json vercel.json scripts/copy_frontend_build.mjs",
+  "installCommand": "npm install",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,

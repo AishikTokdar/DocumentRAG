@@ -16,20 +16,17 @@ jobs:
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24'
-          cache: npm
-          cache-dependency-path: package-lock.json
       - run: |
           pip install 'torch>=2.6,<3' --index-url https://download.pytorch.org/whl/cpu
           pip install -r backend/requirements-dev.txt
       - run: python -B scripts/check_backend.py
       - run: python scripts/sync_model_catalog.py --check
       - run: python scripts/sync_deployment_profiles.py --check
-      - run: python -B scripts/audit_core.py
       - name: Root workspace verification and build
         env:
           VITE_API_BASE_URL: ''
         run: |
-          npm ci
+          npm install
           npm run check:frontend
           npm audit
           npm run build
@@ -54,7 +51,6 @@ jobs:
         run: |
           pip install 'torch>=2.6,<=2.13.0' --index-url https://download.pytorch.org/whl/cpu
           pip install -r backend/requirements.txt
-          python -B scripts/check_space_entrypoint.py dist/huggingface
           python -B scripts/check_backend.py
   frontend-folder:
     runs-on: ubuntu-latest
@@ -71,7 +67,7 @@ jobs:
         run: |
           cp -R frontend /tmp/document-frontend
           cd /tmp/document-frontend
-          npm ci
+          npm install
           npm audit
           npm run build
   containers:

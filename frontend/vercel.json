@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "ignoreCommand": "git rev-parse --verify HEAD^ >/dev/null 2>&1 && git diff HEAD^ HEAD --quiet -- . ../package.json ../package-lock.json",
+  "ignoreCommand": "git rev-parse --verify HEAD^ >/dev/null 2>&1 && git diff HEAD^ HEAD --quiet -- . ../package.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
