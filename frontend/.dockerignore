@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+tests
+*.log
+.wrangler
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+*.lock
+*.lockb
