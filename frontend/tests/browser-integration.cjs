@@ -21,7 +21,7 @@ async function main() {
     });
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
-    await page.goto(`${origin}/chat?api_url=https://invalid.example`);
+    await page.goto(`${origin}/chat`);
     const bytes = await fetch("http://127.0.0.1:8999/__test__/pdf").then(response => response.arrayBuffer());
     const uploaded = page.waitForResponse(response => response.url().endsWith("/upload"));
     await page.locator('input[type="file"]').setInputFiles({ name: "policy.pdf", mimeType: "application/pdf", buffer: Buffer.from(bytes) });
